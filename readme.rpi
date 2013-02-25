@@ -1,0 +1,132 @@
+snes9x-sdl-1.39-rpi20121119
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This is a quick and dirty Raspberry Pi port of snes9x 1.39. It is based on
+an SDL port to the Dingoo game console, with the Dingoo specific stuff
+removed and some Raspberry Pi specific stuff added. It should work at very
+nearly full speed with sound, without overclocking your Pi. It requires
+very little video memory; a 16 MiB split is fine.
+
+1.39 is an ancient build of snes9x that has little in common with the great
+new versions. Hence, the sound emulation is not great. snes9x 1.39 has the
+old snes9x sound core which is not very accurate, but is MUCH speedier than
+the new, accurate snes_spc core. With the Raspberry Pi I have been unable
+to achieve playable speeds with snes9x 1.53, so until someone does some
+pretty heavy optimization work on that code, 1.39 is a reasonable stop-gap
+measure, I think.
+
+Besides some light porting work to make it work well on the Raspberry Pi,
+I've also added basic SDL joystick support, which was previously not in
+this build. You may assign all the SNES buttons to your joypad, as well as
+"exit" and "turbo" buttons.
+
+SUPER FX GAMES DO NOT WORK. Sorry. This means no Yoshi's Island or Star Fox
+until further notice. Support for the SNES mouse, Super Scope and Justifier
+lightguns may or may not work -- probably not. Untested.
+
+
+KEYS:
+~~~~~
+These are the default keys. You can't reassign them without a recompile
+at the moment, sorry about that.
+
+	SNES A:		D
+	SNES B:		C
+	SNES X:		S
+	SNES Y:		X
+	SNES L:		A
+	SNES R:		F
+	SNES Start:	Return
+	SNES Select:	Tab
+	SNES D-pad:	Arrow keys
+	Turbo:		Backspace
+	Quit:		Escape
+
+
+If you want to change the keys you need to edit unix/keys.h and then re-
+compile. Please see http://www.libsdl.org/cgi/docwiki.cgi/SDLKey for a 
+list of key symbols you may use.
+
+
+JOYSTICK BUTTONS:
+~~~~~~~~~~~~~~~~~
+Same deal here, at the moment you need to edit a header file and recompile
+to redefine the joystick buttons. The defaults are not likely to make 
+sense for you unless you have a digital Thrustmaster Firestorm 12-button
+controller. :)
+
+To find out which joystick buttons and axes are which, do:
+
+    $ sudo apt-get install joystick
+
+Then:
+
+    $ jstest /dev/js0
+
+Test and write down. Edit unix/joydef.h and then recompile. Future versions
+will make this stuff not require a recompile.
+
+
+COMPILING:
+~~~~~~~~~~
+If you are willing to live with the default key and joystick mappings, you
+should just be able to run the snes9x binary that comes in the distribution
+-- as long as you have all the required libs. If you want to compile, do:
+
+    $ sudo apt-get update && sudo apt-get install libsdl-dev
+    $ make
+
+That should be it, at least as long as you're running Raspbian 2012-10-28,
+which is the version I've been testing on. This will produce a "snes9x"
+binary in the source directory. Copy it to wherever you want.
+
+
+PLEASE NOTE:
+~~~~~~~~~~~~
+* Do not run from X. This is an SDL port built with the Raspberry Pi
+  framebuffer in mind.
+
+
+* This version of snes9x does not have the capability to scale the output
+  image right now, and it is hardcoded to try to set a 320x240x16 mode.
+  Therefore, if you want full-screen video, it is important that you have 
+  a corresponding mode in /etc/fb.modes. I use composite output and this
+  works for me:
+
+    mode "320x240"
+        geometry 320 240 656 512 16
+        timings 0 0 0 0 0 0 0
+        rgba 5/11,6/5,5/0,0/16
+    endmode
+
+  Yes, 320x240 means 16 vertical pixels will be cut off. This is not
+  unlike playing SNES on a real TV however, so it shouldn't really matter.
+  Future versions may use a different and/or user selectable screen mode.
+
+
+* snes9x-rpi is not ALSA aware, but requires OSS emulation. Using the
+  kernel module does not seem to be a good idea, so use aoss.
+
+    $ sudo apt-get install alsa-oss
+
+  Then...
+
+
+* Run with these switches for best results:
+
+    $ sudo ./aoss snes9x-rpi -sy filename.smc
+
+  You will need to futz around with the permissions for the sound devices
+  or run the emulator as root, otherwise you will get no sound. For some 
+  reason this applies even if your user is in the audio group.
+
+  -sy will attempt to sync audio to video. This means better sound, so I
+  recommend to always launch the emulator with -sy.
+
+
+* Currently, there just straight up ain't no configuration file. You'll
+  have to pass command line arguments every time you start the emulator.
+  Them's the breaks. Going to probably fix this in a coming release.
+
+
+Enjoy!
+palerider
