@@ -53,7 +53,6 @@
 #include <SDL/SDL.h>
 #include "keydef.h"
 
-#include "joydef.h"
 #include "keys.h" // These two were added in the rPi port. See docs.
 
 #undef USE_THREADS
@@ -73,6 +72,8 @@ pthread_mutex_t mutex;
 
 #include <sys/soundcard.h>
 #include <sys/mman.h>
+#include <vector>
+#include <boost/shared_ptr.hpp>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -85,15 +86,24 @@ pthread_mutex_t mutex;
 #include "gfx.h"
 #include "soundux.h"
 #include "spc700.h"
+#include "joystick.hpp"
 
 uint8 *keyssnes;
 int OldSkipFrame;
 
+std::vector<boost::shared_ptr<AvailableJoystick> > availableJoysticks;
+std::vector<boost::shared_ptr<PluggedJoystick> > pluggedJoysticks;
+
 // rPi port: added all this joystick stuff
 // If for some unfathomable reason your joystick has more than 32 buttons or 8 
 // axes, you should change these array definitions to reflect that. 
-uint8 joy_buttons[32];
-uint8 joy_axes[8];
+// int8 joy_buttons[NB_MAX_CONTROLLERS][32];
+// uint8 joy_axes[NB_MAX_CONTROLLERS][8];
+
+// joystick_t *joy_buttons_maping = NULL;
+// unsigned nb_joy_mapping = 0;
+// uint8 *joy_button_numbers[NB_MAX_CONTROLLERS] = {0};
+
 
 void InitTimer ();
 void *S9xProcessSound (void *);
@@ -202,7 +212,8 @@ extern "C"
 int main (int argc, char **argv)
 {
     if (argc < 2)
-	S9xUsage ();
+	    S9xUsage ();
+
     ZeroMemory (&Settings, sizeof (Settings));
 
     Settings.JoystickEnabled = TRUE; // rPi changed default
@@ -246,6 +257,7 @@ int main (int argc, char **argv)
 
     Settings.HBlankStart = (256 * Settings.H_Max) / SNES_HCOUNTER_MAX;
 
+
     if (!Memory.Init () || !S9xInitAPU())
 	OutOfMemory ();
 
@@ -263,7 +275,7 @@ int main (int argc, char **argv)
 
     S9xInitInputDevices ();
 
-    S9xInitDisplay (argc, argv);
+    S9xInitDisplay (argc, argv, availableJoysticks, pluggedJoysticks);
     if (!S9xGraphicsInit ())
 	OutOfMemory ();
 #ifndef _ZAURUS
@@ -405,14 +417,14 @@ void S9xExit ()
 //    S9xSaveCheatFile (S9xGetFilename (".cht"));
     Memory.Deinit ();
     S9xDeinitAPU ();
-
+    
     exit (0);
 }
 
 Uint16 sfc_key[256];
 void S9xInitInputDevices ()
 {
-	memset(sfc_key, 0, 256);
+	memset(sfc_key, 0, sizeof(sfc_key));
 	sfc_key[QUIT] = SDLK_a;
 	sfc_key[A_1] = RPI_KEY_A;
 	sfc_key[B_1] = RPI_KEY_B;
@@ -467,7 +479,28 @@ void S9xInitInputDevices ()
 			envp = j + 1;
 			++i;
 		} while(j);
-	}}
+	}
+
+	/* Joysticks */
+	/* default mapping: */
+	boost::shared_ptr<AvailableJoystick> temp(new AvailableJoystick());
+	availableJoysticks.push_back(temp);
+	/* Load from file */
+	std::ifstream file(JOYSTICK_BUTTONS_FILENAME);
+	bool noError(true);
+	while (file.is_open() && !file.bad() && noError)
+	{
+		try
+		{
+			boost::shared_ptr<AvailableJoystick> j(AvailableJoystick::load(file));
+			availableJoysticks.push_back(j);
+		}
+		catch (...)
+		{
+			noError = false;
+		}
+	}
+}
 
 const char *GetHomeDirectory ()
 {
@@ -735,11 +768,11 @@ void _splitpath (const char *path, char *drive, char *dir, char *fname,
 {
     *drive = 0;
 
-    char *slash = strrchr (path, '/');
+    const char *slash = strrchr (path, '/');
     if (!slash)
 	slash = strrchr (path, '\\');
 
-    char *dot = strrchr (path, '.');
+    const char *dot = strrchr (path, '.');
 
     if (dot && slash && dot < slash)
 	dot = NULL;
@@ -905,34 +938,38 @@ void S9xProcessEvents (bool8_32 block)
 	uint8 jbtn = 0;
 	uint32 num = 0;
 	static bool8_32 TURBO = FALSE;
-
 	SDL_Event event;
 	while(SDL_PollEvent(&event)) {
 		switch(event.type) {
 		case SDL_JOYBUTTONDOWN:
-			joy_buttons[event.jbutton.button] = 1;
+			if (event.jbutton.which < pluggedJoysticks.size())
+				(*pluggedJoysticks[event.jbutton.which])[event.jbutton.button] = true;
 			break;
 		case SDL_JOYBUTTONUP:
-			joy_buttons[event.jbutton.button] = 0;
+			if (event.jbutton.which < pluggedJoysticks.size())
+				(*pluggedJoysticks[event.jbutton.which])[event.jbutton.button] = false;
 			break;
 		case SDL_JOYAXISMOTION:
-			switch(event.jaxis.axis) {
+			if (event.jaxis.which < pluggedJoysticks.size()) {
+				PluggedJoystick &j(*pluggedJoysticks[event.jaxis.which]);
+				switch(event.jaxis.axis) {
 				case JA_LR:
 					if(event.jaxis.value == 0)
-						joy_axes[JA_LR] = CENTER;
+						j[JA_LR] = CENTER;
 					else if(event.jaxis.value > 0)
-						joy_axes[JA_LR] = RIGHT;
+						j[JA_LR] = RIGHT;
 					else
-						joy_axes[JA_LR] = LEFT;
-				break;
+						j[JA_LR] = LEFT;
+					break;
 				case JA_UD:
 					if(event.jaxis.value == 0)
-						joy_axes[JA_UD] = CENTER;
+						j[JA_UD] = CENTER;
 					else if(event.jaxis.value > 0)
-						joy_axes[JA_UD] = DOWN;
+						j[JA_UD] = DOWN;
 					else
-						joy_axes[JA_UD] = UP;
-				break;
+						j[JA_UD] = UP;
+					break;
+				}
 			}
 		case SDL_KEYDOWN:
 			keyssnes = SDL_GetKeyState(NULL);
@@ -1285,26 +1322,31 @@ uint32 S9xReadJoypad (int which1)
 {
 	uint32 val=0x80000000;
 
-	if (keyssnes[sfc_key[L_1]] == SDL_PRESSED || joy_buttons[JB_L])		val |= SNES_TL_MASK;
-	if (keyssnes[sfc_key[R_1]] == SDL_PRESSED || joy_buttons[JB_R])		val |= SNES_TR_MASK;
-	if (keyssnes[sfc_key[X_1]] == SDL_PRESSED || joy_buttons[JB_X])		val |= SNES_X_MASK;
-	if (keyssnes[sfc_key[Y_1]] == SDL_PRESSED || joy_buttons[JB_Y])		val |= SNES_Y_MASK;
-	if (keyssnes[sfc_key[B_1]] == SDL_PRESSED || joy_buttons[JB_B])		val |= SNES_B_MASK;
-	if (keyssnes[sfc_key[A_1]] == SDL_PRESSED || joy_buttons[JB_A])		val |= SNES_A_MASK;
-	if (keyssnes[sfc_key[START_1]] == SDL_PRESSED || joy_buttons[JB_START])	val |= SNES_START_MASK;
-	if (keyssnes[sfc_key[SELECT_1]] == SDL_PRESSED || joy_buttons[JB_SELECT])	val |= SNES_SELECT_MASK;
-	if (keyssnes[sfc_key[UP_1]] == SDL_PRESSED || joy_axes[JA_UD] == UP)		val |= SNES_UP_MASK;
-	if (keyssnes[sfc_key[DOWN_1]] == SDL_PRESSED || joy_axes[JA_UD] == DOWN)	val |= SNES_DOWN_MASK;
-	if (keyssnes[sfc_key[LEFT_1]] == SDL_PRESSED || joy_axes[JA_LR] == LEFT)	val |= SNES_LEFT_MASK;
-	if (keyssnes[sfc_key[RIGHT_1]] == SDL_PRESSED || joy_axes[JA_LR] == RIGHT)	val |= SNES_RIGHT_MASK;
-/*	if (keyssnes[sfc_key[UP_2]] == SDL_PRESSED)	val |= SNES_UP_MASK;
-	if (keyssnes[sfc_key[DOWN_2]] == SDL_PRESSED)	val |= SNES_DOWN_MASK;
-	if (keyssnes[sfc_key[LEFT_2]] == SDL_PRESSED)	val |= SNES_LEFT_MASK;
-	if (keyssnes[sfc_key[RIGHT_2]] == SDL_PRESSED)	val |= SNES_RIGHT_MASK;
-	if (keyssnes[sfc_key[LU_2]] == SDL_PRESSED)	val |= SNES_LEFT_MASK | SNES_UP_MASK;
-	if (keyssnes[sfc_key[LD_2]] == SDL_PRESSED)	val |= SNES_LEFT_MASK | SNES_DOWN_MASK;
-	if (keyssnes[sfc_key[RU_2]] == SDL_PRESSED)	val |= SNES_RIGHT_MASK | SNES_UP_MASK;
-	if (keyssnes[sfc_key[RD_2]] == SDL_PRESSED)	val |= SNES_RIGHT_MASK | SNES_DOWN_MASK; */
+	if (which1 < 0 || which1 >= pluggedJoysticks.size())
+		return val;
+	
+	PluggedJoystick &j(*pluggedJoysticks[which1]);
+
+	if (keyssnes[sfc_key[L_1]] == SDL_PRESSED
+	    || j[JB_L])
+		val |= SNES_TL_MASK;
+
+	if (keyssnes[sfc_key[R_1]] == SDL_PRESSED
+	    || j[JB_R])
+		val |= SNES_TR_MASK;
+
+	if (keyssnes[sfc_key[X_1]] == SDL_PRESSED || j[JB_X])		val |= SNES_X_MASK;
+	if (keyssnes[sfc_key[Y_1]] == SDL_PRESSED || j[JB_Y])		val |= SNES_Y_MASK;
+	if (keyssnes[sfc_key[B_1]] == SDL_PRESSED || j[JB_B])		val |= SNES_B_MASK;
+	if (keyssnes[sfc_key[A_1]] == SDL_PRESSED || j[JB_A])		val |= SNES_A_MASK;
+	if (keyssnes[sfc_key[START_1]] == SDL_PRESSED || j[JB_START])	val |= SNES_START_MASK;
+	if (keyssnes[sfc_key[SELECT_1]] == SDL_PRESSED || j[JB_SELECT])	val |= SNES_SELECT_MASK;
+
+	if (keyssnes[sfc_key[UP_1]] == SDL_PRESSED || j[JA_UD] == UP)		val |= SNES_UP_MASK;
+	if (keyssnes[sfc_key[DOWN_1]] == SDL_PRESSED || j[JA_UD] == DOWN)	val |= SNES_DOWN_MASK;
+	if (keyssnes[sfc_key[LEFT_1]] == SDL_PRESSED || j[JA_LR] == LEFT)	val |= SNES_LEFT_MASK;
+	if (keyssnes[sfc_key[RIGHT_1]] == SDL_PRESSED || j[JA_LR] == RIGHT)	val |= SNES_RIGHT_MASK;
+
 	return(val);
 }
 

@@ -132,6 +132,9 @@ enum {
     SNES_MAX_CONTROLLER_OPTIONS
 };
 
+#define NB_MAX_CONTROLLERS 2
+
+
 #define DEBUG_MODE_FLAG	    (1 << 0)
 #define TRACE_FLAG	    (1 << 1)
 #define SINGLE_STEP_FLAG    (1 << 2)

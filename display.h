@@ -41,6 +41,10 @@
 #ifndef _DISPLAY_H_
 #define _DISPLAY_H_
 
+#include <vector>
+#include <boost/shared_ptr.hpp>
+
+#include "unix/joystick.hpp"
 START_EXTERN_C
 // Routines the port specific code has to implement
 void S9xSetPalette ();
@@ -54,7 +58,9 @@ bool8 S9xReadMousePosition (int which1_0_to_1, int &x, int &y, uint32 &buttons);
 bool8 S9xReadSuperScopePosition (int &x, int &y, uint32 &buttons);
 
 void S9xUsage ();
-void S9xInitDisplay (int argc, char **argv);
+void S9xInitDisplay (int argc, char **argv,
+                     std::vector<boost::shared_ptr<AvailableJoystick> > &availableJoysticks,
+                     std::vector<boost::shared_ptr<PluggedJoystick> > &pluggedJoysticks);
 void S9xDeinitDisplay ();
 void S9xInitInputDevices ();
 void S9xSetTitle (const char *title);

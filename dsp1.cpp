@@ -44,7 +44,7 @@
 #include "memmap.h"
 #include <math.h>
 
-#include "dsp1emu.c"
+#include "dsp1emu.h.impl"
 
 void S9xInitDSP1 ()
 {
