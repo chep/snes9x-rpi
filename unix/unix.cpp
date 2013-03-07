@@ -1346,7 +1346,8 @@ uint32 S9xReadJoypad (int which1)
 	if (keyssnes[sfc_key[DOWN_1]] == SDL_PRESSED || j[JA_UD] == DOWN)	val |= SNES_DOWN_MASK;
 	if (keyssnes[sfc_key[LEFT_1]] == SDL_PRESSED || j[JA_LR] == LEFT)	val |= SNES_LEFT_MASK;
 	if (keyssnes[sfc_key[RIGHT_1]] == SDL_PRESSED || j[JA_LR] == RIGHT)	val |= SNES_RIGHT_MASK;
-
+	if (j[JB_QUIT]) S9xExit();
+	
 	return(val);
 }
 
