@@ -87,9 +87,11 @@ pthread_mutex_t mutex;
 #include "soundux.h"
 #include "spc700.h"
 #include "joystick.hpp"
+#include "soundSystem.hpp"
 
 uint8 *keyssnes;
 int OldSkipFrame;
+SoundSystem *sndSys;
 
 std::vector<boost::shared_ptr<AvailableJoystick> > availableJoysticks;
 std::vector<boost::shared_ptr<PluggedJoystick> > pluggedJoysticks;
@@ -106,7 +108,6 @@ std::vector<boost::shared_ptr<PluggedJoystick> > pluggedJoysticks;
 
 
 void InitTimer ();
-void *S9xProcessSound (void *);
 
 extern void S9xDisplayFrameRate (uint8 *, uint32);
 extern void S9xDisplayString (const char *string, uint8 *, uint32);
@@ -817,8 +818,6 @@ void S9xToggleSoundChannel (int c)
 
 static void SoundTrigger ()
 {
-    if (Settings.APUEnabled && !so.mute_sound)
-	S9xProcessSound (NULL);
 }
 
 void StopTimer ()
@@ -838,14 +837,7 @@ void InitTimer ()
     struct itimerval timeout;
     struct sigaction sa;
     
-#ifdef USE_THREADS
-    if (Settings.ThreadSound)
-    {
-	pthread_mutex_init (&mutex, NULL);
-	pthread_create (&thread, NULL, S9xProcessSound, NULL);
-	return;
-    }
-#endif
+    sndSys = new SoundSystem ();
 
     sa.sa_handler = (SIG_PF) SoundTrigger;
 
@@ -1060,56 +1052,21 @@ bool8_32 S9xOpenSoundDevice (int mode, bool8_32 stereo, int buffer_size)
 {
     int J, K;
 
-    if ((so.sound_fd = open ("/dev/dsp", O_WRONLY)) < 0)
-    {
-	perror ("/dev/dsp");
-	return (FALSE);
-    }
 
-    J = AFMT_S16_LE;
-//    J = AFMT_U8;
-    if (ioctl (so.sound_fd, SNDCTL_DSP_SETFMT, &J) < 0)
-    {
-	perror ("ioctl SNDCTL_DSP_SETFMT");
-	return (FALSE);
-    }
 	so.sixteen_bit = TRUE;
     so.stereo = stereo;
-    if (ioctl (so.sound_fd, SNDCTL_DSP_STEREO, &so.stereo) < 0)
-    {
-	perror ("ioctl SNDCTL_DSP_STEREO");
-	return (FALSE);
-    }
     
     so.playback_rate = Rates[mode & 0x07];
- //   so.playback_rate = 16000;
-    if (ioctl (so.sound_fd, SNDCTL_DSP_SPEED, &so.playback_rate) < 0)
-    {
-	perror ("ioctl SNDCTL_DSP_SPEED");
-	return (FALSE);
-    }
 
     S9xSetPlaybackRate (so.playback_rate);
-
-//    if (buffer_size == 0)
 	so.buffer_size = buffer_size = BufferSizes [mode & 7];
-//	buffer_size = so.buffer_size = 256;
 		
     if (buffer_size > MAX_BUFFER_SIZE / 4)
-	buffer_size = MAX_BUFFER_SIZE / 4;
-//    if (so.sixteen_bit)
-	buffer_size *= 2;
+	    buffer_size = MAX_BUFFER_SIZE / 4;
+    buffer_size *= 2;
     if (so.stereo)
 	buffer_size *= 2;
-	
-    int power2 = log2 (buffer_size);
-    J = K = power2 | (3 << 16);
-    if (ioctl (so.sound_fd, SNDCTL_DSP_SETFRAGMENT, &J) < 0)
-    {
-	perror ("ioctl SNDCTL_DSP_SETFRAGMENT");
-	return (FALSE);
-    }
-    
+	    
     printf ("Rate: %d, Buffer size: %d, 16-bit: %s, Stereo: %s, Encoded: %s\n",
 	    so.playback_rate, so.buffer_size, so.sixteen_bit ? "yes" : "no",
 	    so.stereo ? "yes" : "no", so.encoded ? "yes" : "no");
@@ -1131,192 +1088,8 @@ static volatile bool8 block_signal = FALSE;
 static volatile bool8 block_generate_sound = FALSE;
 static volatile bool8 pending_signal = FALSE;
 
-void S9xGenerateSound ()
-{
-    int bytes_so_far = (so.samples_mixed_so_far << 1);
-//    int bytes_so_far = so.sixteen_bit ? (so.samples_mixed_so_far << 1) :
-//				        so.samples_mixed_so_far;
-#ifndef _ZAURUS
-    if (Settings.SoundSync == 2)
-    {
-	// Assumes sound is signal driven
-	while (so.samples_mixed_so_far >= so.buffer_size && !so.mute_sound)
-	    pause ();
-    }
-    else
-#endif
-    if (bytes_so_far >= so.buffer_size)
-	return;
 
-#ifdef USE_THREADS
-    if (Settings.ThreadSound)
-    {
-	if (block_generate_sound || pthread_mutex_trylock (&mutex))
-	    return;
-    }
-#endif
 
-    block_signal = TRUE;
-
-    so.err_counter += so.err_rate;
-    if (so.err_counter >= FIXED_POINT)
-    {
-        int sample_count = so.err_counter >> FIXED_POINT_SHIFT;
-	int byte_offset;
-	int byte_count;
-
-        so.err_counter &= FIXED_POINT_REMAINDER;
-	if (so.stereo)
-	    sample_count <<= 1;
-	byte_offset = bytes_so_far + so.play_position;
-	    
-	do
-	{
-	    int sc = sample_count;
-	    byte_count = sample_count;
-//	    if (so.sixteen_bit)
-		byte_count <<= 1;
-	    
-	    if ((byte_offset & SOUND_BUFFER_SIZE_MASK) + byte_count > SOUND_BUFFER_SIZE)
-	    {
-		sc = SOUND_BUFFER_SIZE - (byte_offset & SOUND_BUFFER_SIZE_MASK);
-		byte_count = sc;
-//		if (so.sixteen_bit)
-		    sc >>= 1;
-	    }
-	    if (bytes_so_far + byte_count > so.buffer_size)
-	    {
-		byte_count = so.buffer_size - bytes_so_far;
-		if (byte_count == 0)
-		    break;
-		sc = byte_count;
-//		if (so.sixteen_bit)
-		    sc >>= 1;
-	    }
-	    S9xMixSamplesO (Buf, sc,
-			    byte_offset & SOUND_BUFFER_SIZE_MASK);
-	    so.samples_mixed_so_far += sc;
-	    sample_count -= sc;
-	    bytes_so_far = (so.samples_mixed_so_far << 1);
-//	    bytes_so_far = so.sixteen_bit ? (so.samples_mixed_so_far << 1) :
-//	 	           so.samples_mixed_so_far;
-	    byte_offset += byte_count;
-	} while (sample_count > 0);
-    }
-    block_signal = FALSE;
-
-#ifdef USE_THREADS
-    if (Settings.ThreadSound)
-	pthread_mutex_unlock (&mutex);
-    else
-#endif    
-    if (pending_signal)
-    {
-	S9xProcessSound (NULL);
-	pending_signal = FALSE;
-    }
-}
-
-void *S9xProcessSound (void *)
-{
-/*    audio_buf_info info;
-
-    if (!Settings.ThreadSound &&
-	(ioctl (so.sound_fd, SNDCTL_DSP_GETOSPACE, &info) == -1 ||
-	 info.bytes < so.buffer_size))
-    {
-	return (NULL);
-    }
-*/
-#ifdef USE_THREADS
-    do
-    {
-#endif
-
-    int sample_count = so.buffer_size;
-    int byte_offset;
-
-//    if (so.sixteen_bit)
-	sample_count >>= 1;
- 
-#ifdef USE_THREADS
-//    if (Settings.ThreadSound)
-	pthread_mutex_lock (&mutex);
-//    else
-#endif
-//    if (block_signal)
-//    {
-//	pending_signal = TRUE;
-//	return (NULL);
-//    }
-
-    block_generate_sound = TRUE;
-
-    if (so.samples_mixed_so_far < sample_count)
-    {
-//	byte_offset = so.play_position + 
-//		      (so.sixteen_bit ? (so.samples_mixed_so_far << 1)
-//				      : so.samples_mixed_so_far);
-	byte_offset = so.play_position + (so.samples_mixed_so_far << 1);
-
-//printf ("%d:", sample_count - so.samples_mixed_so_far); fflush (stdout);
-	if (Settings.SoundSync == 2)
-	{
-	    memset (Buf + (byte_offset & SOUND_BUFFER_SIZE_MASK), 0,
-		    sample_count - so.samples_mixed_so_far);
-	}
-	else
-	    S9xMixSamplesO (Buf, sample_count - so.samples_mixed_so_far,
-			    byte_offset & SOUND_BUFFER_SIZE_MASK);
-	so.samples_mixed_so_far = 0;
-    }
-    else
-	so.samples_mixed_so_far -= sample_count;
-    
-//    if (!so.mute_sound)
-    {
-	int I;
-	int J = so.buffer_size;
-
-	byte_offset = so.play_position;
-	so.play_position = (so.play_position + so.buffer_size) & SOUND_BUFFER_SIZE_MASK;
-
-#ifdef USE_THREADS
-//	if (Settings.ThreadSound)
-	    pthread_mutex_unlock (&mutex);
-#endif
-	block_generate_sound = FALSE;
-	do
-	{
-	    if (byte_offset + J > SOUND_BUFFER_SIZE)
-	    {
-		I = write (so.sound_fd, (char *) Buf + byte_offset,
-			   SOUND_BUFFER_SIZE - byte_offset);
-		if (I > 0)
-		{
-		    J -= I;
-		    byte_offset = (byte_offset + I) & SOUND_BUFFER_SIZE_MASK;
-		}
-	    }
-	    else
-	    {
-		I = write (so.sound_fd, (char *) Buf + byte_offset, J);
-		if (I > 0)
-		{
-		    J -= I;
-		    byte_offset = (byte_offset + I) & SOUND_BUFFER_SIZE_MASK;
-		}
-	    }
-	} while ((I < 0 && errno == EINTR) || J > 0);
-    }
-
-#ifdef USE_THREADS
-//    } while (Settings.ThreadSound);
-    } while (1);
-#endif
-
-    return (NULL);
-}
 
 uint32 S9xReadJoypad (int which1)
 {

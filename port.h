@@ -114,8 +114,6 @@ void _makepath (char *path, const char *drive, const char *dir,
 void _splitpath (const char *path, char *drive, char *dir, char *fname,
 		 char *ext);
 
-EXTERN_C void S9xGenerateSound ();
-
 #define CHECK_SOUND()
 
 #define SLASH_STR "/"
