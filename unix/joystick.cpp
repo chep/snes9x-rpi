@@ -53,15 +53,6 @@ PluggedJoystick::PluggedJoystick(SDL_Joystick *sdlJoy, int index,
 		buttons[i] = false;
 }
 
-PluggedJoystick::PluggedJoystick(const PluggedJoystick& j):
-	sdlJoy(j.sdlJoy),
-	index(j.index),
-	mapping(j.mapping),
-	buttons(j.buttons),
-	axes(j.axes)
-{
-}
-
 bool& PluggedJoystick::operator[](JOYSTICK_BUTTON button)
 {
 	return buttons[(*mapping)[button]];

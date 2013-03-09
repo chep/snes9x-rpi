@@ -8,6 +8,7 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/utility.hpp>
 #include <SDL/SDL.h>
 
 #define JOYSTICK_BUTTONS_FILENAME "joysticks.buttons"
@@ -61,22 +62,23 @@ private:
 };
 
 
-class PluggedJoystick
+//Uncopiable because of SDL_Joystick:
+class PluggedJoystick: boost::noncopyable 
 {
 public:
 	PluggedJoystick(SDL_Joystick *sdlJoy, int index,
 	                boost::shared_ptr<AvailableJoystick> mapping);
-	PluggedJoystick(const PluggedJoystick& j);
 	~PluggedJoystick() {SDL_JoystickClose(sdlJoy);}
 
-	bool& operator[](unsigned button) {return buttons[button];}
-	int& operator[](JOYSTICK_AXE axe) {return axes[axe];}
+	bool& operator[](unsigned button) {return buttons[button];} // returns SDL button state
+	int& operator[](JOYSTICK_AXE axe) {return axes[axe];} // returns axe state
 
-	bool& operator[](JOYSTICK_BUTTON button);
+	bool& operator[](JOYSTICK_BUTTON button); // returns snes button state
 
 	int getIndex() const {return index;}
 	std::string getName() const {return mapping->getName();}
 	void setMapping(JOYSTICK_BUTTON b, uint8_t number) {(*mapping)[b] = number;}
+
 
 private:
 	SDL_Joystick *sdlJoy;
