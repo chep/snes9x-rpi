@@ -11,6 +11,7 @@
 #include <SDL/SDL.h>
 
 #define JOYSTICK_BUTTONS_FILENAME "joysticks.buttons"
+#define NB_MAX_CONTROLLERS 2
 
 enum JOYSTICK_BUTTON {JB_A,
                       JB_B,
@@ -67,7 +68,7 @@ public:
 	PluggedJoystick(SDL_Joystick *sdlJoy, int index,
 	                boost::shared_ptr<AvailableJoystick> mapping);
 	PluggedJoystick(const PluggedJoystick& j);
-	~PluggedJoystick() {SDL_JoystickClose(sdlJoy);}
+	~PluggedJoystick() {if (sdlJoy) SDL_JoystickClose(sdlJoy);}
 
 	bool& operator[](unsigned button) {return buttons[button];}
 	int& operator[](JOYSTICK_AXE axe) {return axes[axe];}

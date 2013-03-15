@@ -58,13 +58,10 @@ bool8 S9xReadMousePosition (int which1_0_to_1, int &x, int &y, uint32 &buttons);
 bool8 S9xReadSuperScopePosition (int &x, int &y, uint32 &buttons);
 
 void S9xUsage ();
-void S9xInitDisplay (int argc, char **argv,
-                     std::vector<boost::shared_ptr<AvailableJoystick> > &availableJoysticks,
-                     std::vector<boost::shared_ptr<PluggedJoystick> > &pluggedJoysticks);
+void S9xInitDisplay (int argc, char **argv);
 void S9xDeinitDisplay ();
 void S9xInitInputDevices ();
 void S9xSetTitle (const char *title);
-void S9xProcessEvents (bool8_32 block);
 void S9xPutImage (int width, int height);
 void S9xParseDisplayArg (char **argv, int &index, int argc);
 void S9xToggleSoundChannel (int channel);

@@ -3,12 +3,14 @@
 #include <string>
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <boost/shared_ptr.hpp>
 
 #include "joystick.hpp"
 #include "snes9x.h"
+#include "keyboard.hpp"
 
 struct SDLInfos
 {
@@ -27,6 +29,19 @@ const std::string conversion[] = {"A",
                                   "SELECT",
                                   "ACCEL",
                                   "QUIT"};
+
+const std::string conversionKbd[] = {"A",
+                                     "B",
+                                     "X",
+                                     "Y",
+                                     "L",
+                                     "R",
+                                     "START",
+                                     "SELECT",
+                                     "RIGHT",
+                                     "LEFT",
+                                     "UP",
+                                     "DOWN"};
 
 static bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos);
 static bool initJoysticks(std::vector<boost::shared_ptr<AvailableJoystick> > &availableJoysticks,
@@ -67,7 +82,6 @@ int main()
 
 	for (int i = 0; i < pluggedJoysticks.size(); ++i)
 	{
-		std::string msg;
 		SDL_FillRect(sdlInfos.screen, NULL, SDL_MapRGB(sdlInfos.screen->format, 0, 0, 0));
 		displayMessage(&sdlInfos, 0, 0,
 		               "Configuration of: " + pluggedJoysticks[i]->getName());
@@ -100,6 +114,8 @@ int main()
 						ok = true;
 					}
 					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -109,6 +125,83 @@ int main()
 	std::for_each(availableJoysticks.begin(),
 	              availableJoysticks.end(),
 	              std::bind1st(std::ptr_fun(AvailableJoystick::save), ofile));
+
+	//Keyboard:
+	KeyboardMapping kbd;
+	bool ok = false;
+	SDL_Event event;
+
+	//common keys
+	SDL_FillRect(sdlInfos.screen, NULL, SDL_MapRGB(sdlInfos.screen->format, 0, 0, 0));
+	displayMessage(&sdlInfos, 0, 0, "Keyboard configuration");
+
+	displayMessage(&sdlInfos, 0, 15,
+	               "Press ACCEL key.");
+	ok = false;
+	while(!ok)
+	{
+		if (!SDL_WaitEvent(&event))
+			std::cerr<<"SDL_WaitEvent error: "<<SDL_GetError()<<std::endl;
+		switch(event.type)
+		{
+		case SDL_KEYDOWN:
+			kbd[KEY_ACCEL] = event.key.keysym.sym;
+			ok = true;
+			break;
+		default:
+			break;
+		}
+	}
+	displayMessage(&sdlInfos, 0, 30,
+	               "Press QUIT key.");
+	ok = false;
+	while(!ok)
+	{
+		if (!SDL_WaitEvent(&event))
+			std::cerr<<"SDL_WaitEvent error: "<<SDL_GetError()<<std::endl;
+		switch(event.type)
+		{
+		case SDL_KEYDOWN:
+			kbd[KEY_QUIT] = event.key.keysym.sym;
+			ok = true;
+			break;
+		default:
+			break;
+		}
+	}
+
+
+	//player specific keys
+	for (unsigned i = 0; i < MAX_KEYBOARD_PLAYERS; i++)
+	{
+		std::ostringstream oss("Keyboard configuration for player ");
+		SDL_FillRect(sdlInfos.screen, NULL, SDL_MapRGB(sdlInfos.screen->format, 0, 0, 0));
+		oss<<i;
+		displayMessage(&sdlInfos, 0, 0, oss.str());
+
+		for (unsigned k = 0; k < KEY_NB_KEYS; ++k)
+		{
+			displayMessage(&sdlInfos, 0, k * 15 + 15,
+			               "Press " + conversionKbd[k] +" key.");
+			ok = false;
+			while(!ok)
+			{
+				if (!SDL_WaitEvent(&event))
+					std::cerr<<"SDL_WaitEvent error: "<<SDL_GetError()<<std::endl;
+				switch(event.type)
+				{
+				case SDL_KEYDOWN:
+					kbd[i][(SNES_KEY)k] = event.key.keysym.sym;
+					ok = true;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+	kbd.save();
+
 	return 0;
 }
 

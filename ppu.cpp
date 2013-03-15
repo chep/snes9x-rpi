@@ -51,7 +51,8 @@
 //#include "netplay.h"
 #include "sdd1.h"
 #include "srtc.h"
-
+#include "inputController.hpp"
+#include "exceptions.hpp"
 
 #ifndef ZSNES_FX
 #include "fxemu.h"
@@ -62,6 +63,8 @@ extern struct FxRegs_s GSU;
 EXTERN_C void S9xSuperFXWriteReg (uint8, uint32);
 EXTERN_C uint8 S9xSuperFXReadReg (uint32);
 #endif
+
+extern InputController *inputController;
 
 void S9xUpdateHTimer (struct SPPU *ppu, struct SCPUState *cpu)
 {
@@ -2536,7 +2539,15 @@ void S9xUpdateJoypads(struct InternalPPU *ippu)
 
 	for (i = 0; i < 5; i++)
 	{
-		ippu->Joypads[i] = S9xReadJoypad(i);
+		try
+		{
+			ippu->Joypads[i] = inputController->getJoystickState(i);
+		}
+		catch (ExitException e)
+		{
+			S9xExit();
+		}
+
 		if (ippu->Joypads[i] & SNES_LEFT_MASK)
 			ippu->Joypads[i] &= ~SNES_RIGHT_MASK;
 		if (ippu->Joypads[i] & SNES_UP_MASK)
