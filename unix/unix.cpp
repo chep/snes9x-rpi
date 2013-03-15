@@ -837,7 +837,7 @@ void InitTimer ()
     struct itimerval timeout;
     struct sigaction sa;
     
-    sndSys = new SoundSystem ();
+    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "default");
 
     sa.sa_handler = (SIG_PF) SoundTrigger;
 

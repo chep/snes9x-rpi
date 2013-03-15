@@ -2,6 +2,7 @@
 #define _SOUNDSYSTEM_HPP_
 #include <alsa/asoundlib.h>
 #include <boost/thread.hpp>
+#include <boost/cstdint.hpp>
 
 class SoundSystem
 {
@@ -17,11 +18,9 @@ public:
 
 private:
 	snd_pcm_t *playback_handle;
-	char *audioBuffer;
+	boost::int16_t *audioBuffer;
 	unsigned bufferSize;
 	
-	unsigned mixedSamples;
-
 	boost::thread *threadProcess;
 };
 

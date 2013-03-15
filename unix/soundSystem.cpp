@@ -1,10 +1,9 @@
 #include <iostream>
+#include <fstream>
 
 #include "soundSystem.hpp"
 #include "port.h"
 #include "soundux.h"
-
-#define AUDIO_BUFFER_SIZE (1024 * 16)
 
 static const unsigned int audioFrequencies[8] =
 {0, 8192, 11025, 16000, 22050, 29300, 36600, 44100};
@@ -15,14 +14,12 @@ static const unsigned int audioBufferSizes [8] =
 SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	playback_handle(NULL),
 	audioBuffer(NULL),
-	mixedSamples(0),
 	threadProcess(NULL)
 {
 	int err;
 	snd_pcm_hw_params_t *hw_params;
 	unsigned int frequency;
 
-	device = "plughw:0,0";
 	if (mode >= sizeof(audioFrequencies))
 		mode = sizeof(audioFrequencies) - 1;
 	frequency = audioFrequencies[mode];
@@ -99,13 +96,13 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 
 	snd_pcm_hw_params_free (hw_params);
 
-	audioBuffer = new char[AUDIO_BUFFER_SIZE];
+	audioBuffer = new boost::int16_t[bufferSize];
 	if (!audioBuffer)
 	{
 		std::cerr<<"Unable to allocate audio buffer."<<std::endl;
 		throw -1;
 	}
-	std::memset(audioBuffer, 0, AUDIO_BUFFER_SIZE);
+	std::memset(audioBuffer, 0, bufferSize);
 
 	threadProcess = new boost::thread(boost::bind(&SoundSystem::processSound, this));
 
@@ -118,126 +115,25 @@ error:
 
 SoundSystem::~SoundSystem()
 {
+	if (threadProcess)
+		delete threadProcess;
+
 	if (playback_handle)
 		snd_pcm_close(playback_handle);
 
 	if (audioBuffer)
 		delete [] audioBuffer;
-
-	if (threadProcess)
-		delete threadProcess;
 }
 
 
 void SoundSystem::processSound()
 {	
-	static uint8 Buf[MAX_BUFFER_SIZE] __attribute__((aligned(4)));
-// static uint8 buffer[AUDIO_BUFFER_SIZE];
-
-	// unsigned int nbytesToWrite(0);
-	// unsigned int position(0);
-	//do
-	{
-		// S9xMixSamplesO (Buf, so.buffer_size/2,
-		//                 0);
-		// write (so.sound_fd, (char *) Buf,
-		//        so.buffer_size);
-
-		// int sample_count = so.buffer_size;
-		// int byte_offset;
-
-		// sample_count >>= 1;
- 
-
-		// if (so.samples_mixed_so_far < sample_count)
-		// {
-		// 	byte_offset = so.play_position + (so.samples_mixed_so_far << 1);
-
-		// 		S9xMixSamplesO (Buf, sample_count - so.samples_mixed_so_far,
-		// 		                byte_offset & SOUND_BUFFER_SIZE_MASK);
-		// 	so.samples_mixed_so_far = 0;
-		// }
-		// else
-		// 	so.samples_mixed_so_far -= sample_count;
-    
-		// {
-		// 	int I;
-		// 	int J = so.buffer_size;
-
-		// 	byte_offset = so.play_position;
-		// 	so.play_position = (so.play_position + so.buffer_size) & SOUND_BUFFER_SIZE_MASK;
-
-		// 	do
-		// 	{
-		// 		if (byte_offset + J > SOUND_BUFFER_SIZE)
-		// 		{
-		// 			I = write (so.sound_fd, (char *) Buf + byte_offset,
-		// 			           SOUND_BUFFER_SIZE - byte_offset);
-		// 			if (I > 0)
-		// 			{
-		// 				J -= I;
-		// 				byte_offset = (byte_offset + I) & SOUND_BUFFER_SIZE_MASK;
-		// 			}
-		// 		}
-		// 		else
-		// 		{
-		// 			I = write (so.sound_fd, (char *) Buf + byte_offset, J);
-		// 			if (I > 0)
-		// 			{
-		// 				J -= I;
-		// 				byte_offset = (byte_offset + I) & SOUND_BUFFER_SIZE_MASK;
-		// 			}
-		// 		}
-		// 	} while ((I < 0 && errno == EINTR) || J > 0);
-		// }
-
-//	} while (1);
-	}
 	while (true)
 	{
-		//void *bufs[2] = {Buf, Buf + so.buffer_size/2};
-		S9xMixSamplesO (Buf, so.buffer_size,
+		S9xMixSamplesO (audioBuffer, bufferSize,
 		                0);
-		snd_pcm_writei(playback_handle,
-		               Buf,
-		               so.buffer_size);
-
-		//write buffer:
-		// while (nbytesToWrite)
-		// {
-		// 	snd_pcm_sframes_t nbytesWritten(0);
-		// 	if (position + nbytesToWrite > AUDIO_BUFFER_SIZE)
-		// 		nbytesWritten = snd_pcm_writei(playback_handle,
-		// 		                               audioBuffer + position,
-		// 		                               AUDIO_BUFFER_SIZE - nbytesToWrite);
-		// 	else
-		// 		nbytesWritten = snd_pcm_writei(playback_handle,
-		// 		                               audioBuffer + position,
-		// 		                               nbytesToWrite);
-		// 	if (nbytesWritten > 0)
-		// 	{
-		// 		nbytesToWrite -= nbytesWritten;
-		// 		position = (position + nbytesWritten) % AUDIO_BUFFER_SIZE;
-		// 	}
-		// 	else
-		// 	{
-		// 		std::cerr<<"Unable to write to alsa device"<<std::endl;
-		// 		throw -1;
-		// 	}
-		// }
+		snd_pcm_sframes_t err = snd_pcm_writei(playback_handle,
+		                                       audioBuffer,
+		                                       bufferSize/2);
 	}
 }
-
-
-
-// void SoundSystem::generateSound()
-// {
-// 	boost::mutex::scoped_lock lock(mutex, boost::try_to_lock);
-// 	if (!lock)
-// 		return;
-
-// 	unsigned generatedBytes(mixedSamples * 2);
-// 	if (generatedBytes >= bufferSize)
-// 		return;
-// }
-

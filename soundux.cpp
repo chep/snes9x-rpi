@@ -1452,7 +1452,7 @@ void S9xMixSamples (uint8 *buffer, int sample_count)
 }
 #endif
 
-void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
+void S9xMixSamplesO (boost::int16_t *buffer, int sample_count, int byte_offset)
 {
     int J;
     int I;
@@ -1511,7 +1511,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 								E * sd->echo_volume [J & 1]) / VOL_DIV16;
 							
 							CLIP16(I);
-							((signed short *) buffer)[J + O] = I;
+							buffer[J + O] = I;
 						}
 					}
 					else
@@ -1544,7 +1544,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 								E * sd->echo_volume [J & 1]) / VOL_DIV16;
 							
 							CLIP16(I);
-							((signed short *) buffer)[J + O] = I;
+							buffer[J + O] = I;
 						}
 					}
 				}
@@ -1568,7 +1568,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 								sd->master_volume [0] +
 								E * sd->echo_volume [0]) / VOL_DIV16;
 							CLIP16(I);
-							((signed short *) buffer)[J + O] = I;
+							buffer[J + O] = I;
 						}
 					}
 					else
@@ -1599,7 +1599,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 							I = (MixBuffer [J] * sd->master_volume [0] +
 								E * sd->echo_volume [0]) / VOL_DIV16;
 							CLIP16(I);
-							((signed short *) buffer)[J + O] = I;
+							buffer[J + O] = I;
 						}
 					}
 				}
@@ -1613,7 +1613,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 					sd->master_volume [J & 1]) / VOL_DIV16;
 				
 				CLIP16(I);
-				((signed short *) buffer)[J + O] = I;
+				buffer[J + O] = I;
 			}
 		}
 	}
