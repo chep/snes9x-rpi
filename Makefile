@@ -30,7 +30,7 @@ SNES9X_SRC += $(wildcard unzip/*.cpp)
 SNES9X_OBJ = $(SNES9X_SRC:.cpp=.o)
 
 CONFTOOL_SRC = $(wildcard confTool/*.cpp)
-CONFTOOL_SRC += unix/input/joystick.cpp unix/input/keyboard.cpp unix/input/inputConfig.cpp
+CONFTOOL_SRC += unix/input/joystick.cpp unix/input/inputConfig.cpp
 CONFTOOL_OBJ = $(CONFTOOL_SRC:.cpp=.o)
 
 %.o: %.cpp %.d
