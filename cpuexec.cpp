@@ -217,8 +217,6 @@ void S9xDoHBlankProcessing (struct SCPUState *cpu, struct SAPU *apu, struct SIAP
 	S9xSuperFXExec ();
 #endif
 #ifndef STORM
-	if (Settings.SoundSync)
-	    S9xGenerateSound ();
 #endif
 
 	cpu->Cycles -= Settings.H_Max;

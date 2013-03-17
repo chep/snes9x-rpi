@@ -110,19 +110,6 @@
 #define SNES_CYCLES_PER_SCANLINE ((uint32) (SNES_SCANLINE_TIME / SNES_CLOCK_LEN + 0.5))
 #endif
 
-#define SNES_TR_MASK	    (1 << 4)
-#define SNES_TL_MASK	    (1 << 5)
-#define SNES_X_MASK	    (1 << 6)
-#define SNES_A_MASK	    (1 << 7)
-#define SNES_RIGHT_MASK	    (1 << 8)
-#define SNES_LEFT_MASK	    (1 << 9)
-#define SNES_DOWN_MASK	    (1 << 10)
-#define SNES_UP_MASK	    (1 << 11)
-#define SNES_START_MASK	    (1 << 12)
-#define SNES_SELECT_MASK    (1 << 13)
-#define SNES_Y_MASK	    (1 << 14)
-#define SNES_B_MASK	    (1 << 15)
-
 enum {
     SNES_MULTIPLAYER5,
     SNES_JOYPAD,
@@ -132,7 +119,6 @@ enum {
     SNES_MAX_CONTROLLER_OPTIONS
 };
 
-#define NB_MAX_CONTROLLERS 2
 
 
 #define DEBUG_MODE_FLAG	    (1 << 0)

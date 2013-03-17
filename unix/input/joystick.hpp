@@ -11,8 +11,6 @@
 #include <boost/utility.hpp>
 #include <SDL/SDL.h>
 
-#define JOYSTICK_BUTTONS_FILENAME "joysticks.buttons"
-
 enum JOYSTICK_BUTTON {JB_A,
                       JB_B,
                       JB_X,
@@ -25,7 +23,7 @@ enum JOYSTICK_BUTTON {JB_A,
                       JB_QUIT,
                       JB_NB_BUTTONS};
 
-enum JOYSTICK_AXE {JA_LR,
+enum JOYSTICK_AXIS {JA_LR,
                    JA_UD};
 
 #define CENTER	0
@@ -34,14 +32,13 @@ enum JOYSTICK_AXE {JA_LR,
 #define UP	1
 #define DOWN	2
 
+#define JOYSTICK_DEFAULT_NAME "Default"
+
 class AvailableJoystick
 {
 public:
-	AvailableJoystick(std::string name="Default");
+	AvailableJoystick(std::string name = JOYSTICK_DEFAULT_NAME);
 	uint8_t& operator[](JOYSTICK_BUTTON i) {return mapping[i];}
-
-	static boost::shared_ptr<AvailableJoystick> load(std::ifstream &file);
-	static void save(std::ofstream &file, boost::shared_ptr<AvailableJoystick> j);
 
 	void setName(const std::string& n) {name = n;}
 	std::string getName() const {return name;}
@@ -66,24 +63,20 @@ private:
 class PluggedJoystick: boost::noncopyable 
 {
 public:
-	PluggedJoystick(SDL_Joystick *sdlJoy, int index,
-	                boost::shared_ptr<AvailableJoystick> mapping);
-	~PluggedJoystick() {SDL_JoystickClose(sdlJoy);}
+	PluggedJoystick(SDL_Joystick *sdlJoy,
+	                AvailableJoystick *mapping);
+	~PluggedJoystick() {if (sdlJoy) SDL_JoystickClose(sdlJoy);}
 
-	bool& operator[](unsigned button) {return buttons[button];} // returns SDL button state
-	int& operator[](JOYSTICK_AXE axe) {return axes[axe];} // returns axe state
+	bool& operator[](unsigned button) {return buttons[button];}
+	int& operator[](JOYSTICK_AXIS axe) {return axes[axe];}
+	bool& operator[](JOYSTICK_BUTTON button) {return buttons[(*mapping)[button]];}
 
-	bool& operator[](JOYSTICK_BUTTON button); // returns snes button state
-
-	int getIndex() const {return index;}
 	std::string getName() const {return mapping->getName();}
-	void setMapping(JOYSTICK_BUTTON b, uint8_t number) {(*mapping)[b] = number;}
 
 
 private:
 	SDL_Joystick *sdlJoy;
-	int index;
-	boost::shared_ptr<AvailableJoystick> mapping;
+	AvailableJoystick *mapping;
 	std::map<unsigned, bool> buttons;
 	std::map<unsigned, int> axes;
 };

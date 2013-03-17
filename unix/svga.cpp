@@ -62,7 +62,6 @@
 #include "gfx.h"
 #include "display.h"
 #include "apu.h"
-#include "keydef.h"
 #include "joystick.hpp"
 
 #define COUNT(a) (sizeof(a) / sizeof(a[0]))
@@ -87,13 +86,8 @@ void S9xTextMode ()
 }
 #endif
 
-extern uint8 *keyssnes;
-void S9xInitDisplay (int /*argc*/, char ** /*argv*/,
-                     std::vector<boost::shared_ptr<AvailableJoystick> > &availableJoysticks,
-                     std::vector<boost::shared_ptr<PluggedJoystick> > &pluggedJoysticks)
+void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 {
-	int numJoysticks(0);
-
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (Settings.NextAPUEnabled ? SDL_INIT_AUDIO : 0)) < 0 ) 
 	{
 		printf("Could not initialize SDL(%s)\n", SDL_GetError());
@@ -101,46 +95,9 @@ void S9xInitDisplay (int /*argc*/, char ** /*argv*/,
 	}
 
 	atexit(SDL_Quit);
-	keyssnes = SDL_GetKeyState(NULL);
 	screen = SDL_SetVideoMode(xs, ys, 16, SDL_SWSURFACE);
 	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
 
-	numJoysticks = SDL_NumJoysticks();
-
-	for (int i = 0; i < numJoysticks && i < NB_MAX_CONTROLLERS; ++i) 
-	{
-		SDL_Joystick *joy = SDL_JoystickOpen(i);
-		if(joy)
-		{
-			std::cout<<"Opened joystick "<<i<<std::endl;
-			if(SDL_JoystickEventState(SDL_ENABLE) != SDL_ENABLE)
-			{
-				printf("Could not set joystick event state\n", SDL_GetError());
-				S9xExit();
-			}
-			/* mapping */
-			std::string joyName(SDL_JoystickName(i));
-			typedef std::vector<boost::shared_ptr<AvailableJoystick> >::iterator AJIt;
-			AJIt it = std::find(availableJoysticks.begin(),
-			                    availableJoysticks.end(),
-			                    joyName);
-			if (it == availableJoysticks.end())
-			{
-				std::cerr<<"Could not find joystick mapping for"<<joyName;
-				std::cerr<<"Use default"<<std::endl;
-				boost::shared_ptr<PluggedJoystick> pj(new PluggedJoystick(joy,
-				                                                          i,
-				                                                          *availableJoysticks.begin()));
-				pluggedJoysticks.push_back(pj);
-			}
-			else
-			{
-				std::cout<<"Mapping for "<<SDL_JoystickName(i)<<" found!"<<std::endl;
-				boost::shared_ptr<PluggedJoystick> pj(new PluggedJoystick(joy, i, *it));
-				pluggedJoysticks.push_back(pj);
-			}
-		}
-	}
 
 	if (screen == NULL)
 	{
