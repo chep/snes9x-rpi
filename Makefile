@@ -1,10 +1,10 @@
 
 CXX = g++
 
-INCLDIRS=-Iunix -Iunzip -I.
+INCLDIRS=-Iunix -Iunix/input -Iunzip -I.
 LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
 
-OPTIMISE= -D_ZAURUS -O2 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer 
+OPTIMISE= -D_ZAURUS -O3 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
 UNZIPDEFINES=-DUNZIP_SUPPORT
 SOUNDDEFINES=-DSPC700_C
@@ -25,12 +25,13 @@ LDFLAGS=-lboost_serialization -lSDL -lstdc++ -lz -lpthread -lSDL_ttf -lboost_thr
 
 SNES9X_SRC = $(wildcard *.cpp)
 SNES9X_SRC += $(wildcard unix/*.cpp)
+SNES9X_SRC += $(wildcard unix/input/*.cpp)
 SNES9X_SRC += $(wildcard unzip/*.cpp)
 SNES9X_OBJ = $(SNES9X_SRC:.cpp=.o)
 
-CONFJOY_SRC = $(wildcard confJoy/*.cpp)
-CONFJOY_SRC += unix/joystick.cpp unix/keyboard.cpp
-CONFJOY_OBJ = $(CONFJOY_SRC:.cpp=.o)
+CONFTOOL_SRC = $(wildcard confTool/*.cpp)
+CONFTOOL_SRC += unix/input/joystick.cpp unix/input/keyboard.cpp unix/input/inputConfig.cpp
+CONFTOOL_OBJ = $(CONFTOOL_SRC:.cpp=.o)
 
 %.o: %.cpp %.d
 	@echo [C++] $@
@@ -41,20 +42,20 @@ CONFJOY_OBJ = $(CONFJOY_SRC:.cpp=.o)
 
 LDLIBS =  
 
-all: snes9x confJoyTool
+all: snes9x confTool/confTool
 
 snes9x: $(SNES9X_OBJ)
 	@echo [LD] $@
 	@$(CXX) $(LIBDIRS) $(LDFLAGS) -o $@ $^
 
-confJoyTool: $(CONFJOY_OBJ)
+confTool/confTool: $(CONFTOOL_OBJ)
 	@echo [LD] $@
 	@$(CXX) $(LIBDIRS) $(LDFLAGS) -o $@ $^
 
 clean:
 	find -name '*.o' -delete
 	find -name '*.d' -delete
-	rm -f snes9x confJoyTool
+	rm -f snes9x confTool/confTool
 
 include $(SNES9X_OBJ:.o=.d)
-include $(CONFJOY_OBJ:.o=.d)
+include $(CONFTOOL_OBJ:.o=.d)

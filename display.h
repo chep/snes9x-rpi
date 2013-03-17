@@ -44,7 +44,7 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
-#include "unix/joystick.hpp"
+#include "joystick.hpp"
 START_EXTERN_C
 // Routines the port specific code has to implement
 void S9xSetPalette ();
