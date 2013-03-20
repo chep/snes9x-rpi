@@ -416,8 +416,12 @@ void S9xAutoSaveSRAM ()
 void S9xExit ()
 {
     S9xSetSoundMute (TRUE);
+    if (sndSys)
+	    delete sndSys;
+
     if (inputController)
 	    delete inputController;
+
     S9xDeinitDisplay ();
     Memory.SaveSRAM (S9xGetFilename (".srm"));
 //    S9xSaveCheatFile (S9xGetFilename (".cht"));
