@@ -52,7 +52,8 @@ static const unsigned int audioBufferSizes [8] =
 SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	playback_handle(NULL),
 	audioBuffer(NULL),
-	threadProcess(NULL)
+	threadProcess(NULL),
+	terminated(false)
 {
 	int err;
 	snd_pcm_hw_params_t *hw_params;
@@ -153,8 +154,12 @@ error:
 
 SoundSystem::~SoundSystem()
 {
+	terminated = true;
 	if (threadProcess)
+	{
+		threadProcess->join();
 		delete threadProcess;
+	}
 
 	if (playback_handle)
 		snd_pcm_close(playback_handle);
@@ -166,7 +171,7 @@ SoundSystem::~SoundSystem()
 
 void SoundSystem::processSound()
 {	
-	while (true)
+	while (!terminated)
 	{
 		S9xMixSamplesO (audioBuffer, bufferSize,
 		                0);

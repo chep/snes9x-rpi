@@ -60,6 +60,7 @@ private:
 	unsigned bufferSize;
 	
 	boost::thread *threadProcess;
+	bool terminated;
 };
 
 #endif
