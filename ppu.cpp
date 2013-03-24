@@ -2539,6 +2539,7 @@ void S9xUpdateJoypads(struct InternalPPU *ippu)
 
 	try
 	{
+		inputController->process();
 		inputController->checkGlobal();
 
 		for (i = 0; i < 5; i++)
