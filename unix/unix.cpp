@@ -58,14 +58,7 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
-
-#ifdef USE_THREADS
-#include <pthread.h>
-#include <sched.h>
-
-pthread_t thread;
-pthread_mutex_t mutex;
-#endif
+#include <signal.h>
 
 #include <sys/soundcard.h>
 #include <sys/mman.h>
@@ -115,17 +108,12 @@ uint32 xs = 320, ys = 240, cl = 0, cs = 0, mfs = 10;
 char *rom_filename = NULL;
 char *snapshot_filename = NULL;
 
-#ifndef _ZAURUS
-#if defined(__linux) || defined(__sun)
-static void sigbrkhandler(int)
+static void signalHandler(int)
 {
-#ifdef DEBUGGER
-    CPU.Flags |= DEBUG_MODE_FLAG;
-    signal(SIGINT, (SIG_PF) sigbrkhandler);
-#endif
+	std::cerr<<"Signal received. Exiting"<<std::endl;
+	S9xExit();
 }
-#endif
-#endif
+
 
 void OutOfMemory ()
 {
@@ -281,6 +269,10 @@ int main (int argc, char **argv)
     inputController = new InputController();
     if (!inputController)
 	    OutOfMemory ();
+
+    /* SIGTERM management*/
+    signal(SIGTERM, signalHandler);
+    signal(SIGINT, signalHandler);
 
 #ifndef _ZAURUS
     S9xTextMode ();
