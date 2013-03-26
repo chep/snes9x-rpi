@@ -73,13 +73,13 @@ InputConfig::InputConfig(bool unused)
 	globalMap[KEY_QUIT] = SDLK_ESCAPE;
 
 	KeyboardMapping m;
-	m.setSDLKey(KEY_A, SDLK_z);
-	m.setSDLKey(KEY_B, SDLK_x);
-	m.setSDLKey(KEY_X, SDLK_a);
-	m.setSDLKey(KEY_Y, SDLK_s);
-	m.setSDLKey(KEY_L, SDLK_q);
-	m.setSDLKey(KEY_R, SDLK_w);
-	m.setSDLKey(KEY_START, SDLK_RETURN);
+	m.setSDLKey(KEY_A, SDLK_d);
+	m.setSDLKey(KEY_B, SDLK_s);
+	m.setSDLKey(KEY_X, SDLK_e);
+	m.setSDLKey(KEY_Y, SDLK_w);
+	m.setSDLKey(KEY_L, SDLK_a);
+	m.setSDLKey(KEY_R, SDLK_f);
+	m.setSDLKey(KEY_START, SDLK_SPACE);
 	m.setSDLKey(KEY_SELECT, SDLK_LCTRL);
 	m.setSDLKey(KEY_RIGHT, SDLK_RIGHT);
 	m.setSDLKey(KEY_LEFT, SDLK_LEFT);
