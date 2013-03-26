@@ -51,7 +51,7 @@ extern struct SPPU PPU;
 
 
 
-InputController::InputController() throw (ExitException):
+InputController::InputController() throw (SnesException):
 	threadProcess(NULL),
 	keyboardState(SDL_GetKeyState(NULL))
 {

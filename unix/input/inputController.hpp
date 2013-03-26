@@ -51,7 +51,7 @@
 class InputController
 {
 public:
-	InputController() throw (ExitException);
+	InputController() throw (SnesException);
 	virtual ~InputController();
 
 public:

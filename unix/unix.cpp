@@ -266,7 +266,29 @@ int main (int argc, char **argv)
     if (!S9xGraphicsInit ())
 	    OutOfMemory ();
 
-    inputController = new InputController();
+    try
+    {
+	    inputController = new InputController();
+    }
+    catch (SnesBadConfigFileException e)
+    {
+	    try
+	    {
+		    InputConfig tmp(true); //Create new config file
+		    tmp.save();
+		    inputController = new InputController();
+	    }
+	    catch (...)
+	    {
+		    std::cerr<<"Unable to create a default configuration file. Check permissions"<<std::endl;
+		    S9xExit();
+	    }
+    }
+    catch(...)
+    {
+	    S9xExit();
+    }
+
     if (!inputController)
 	    OutOfMemory ();
 

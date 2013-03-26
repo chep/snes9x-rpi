@@ -53,7 +53,7 @@
 class InputConfig
 {
 public:
-	InputConfig(const std::string &file = INPUT_CONFIG_DEFAULT_FILE) throw (ExitException);
+	InputConfig(const std::string &file = INPUT_CONFIG_DEFAULT_FILE) throw (SnesBadConfigFileException);
 	InputConfig(bool unused); //create only default keymap and joystick
 
 public:

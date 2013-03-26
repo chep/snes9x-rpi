@@ -69,4 +69,13 @@ public:
 private:
 };
 
+class SnesBadConfigFileException: public SnesException
+{
+public:
+	SnesBadConfigFileException() : SnesException("Bad Config file") {}
+	virtual ~SnesBadConfigFileException() {}
+
+private:
+};
+
 #endif

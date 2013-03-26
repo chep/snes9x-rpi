@@ -44,11 +44,11 @@
 #include "inputConfig.hpp"
 
 
-InputConfig::InputConfig(const std::string &file) throw (ExitException)
+InputConfig::InputConfig(const std::string &file) throw (SnesBadConfigFileException)
 {
 	std::ifstream f(file.c_str());
 	if (!f.is_open() || f.bad())
-		throw ExitException();
+		throw SnesBadConfigFileException();
 
 	try
 	{
@@ -57,11 +57,11 @@ InputConfig::InputConfig(const std::string &file) throw (ExitException)
 	}
 	catch (...)
 	{
-		throw ExitException();
+		throw SnesBadConfigFileException();
 	}
 
 	if (!verify())
-		throw ExitException();
+		throw SnesBadConfigFileException();
 }
 
 
