@@ -68,9 +68,15 @@ InputController::InputController() throw (SnesException):
 	{
 		SDL_Joystick *joy = SDL_JoystickOpen(i);
 		if(joy)
-			players.push_back(Player(NULL,
-			                         joy,
-			                         config.getJoystick(SDL_JoystickName(i))));
+		{
+			//Check if keyboard is not detected as a joystick
+			if (SDL_JoystickNumAxes(joy) > 6)
+				SDL_JoystickClose(joy);
+			else
+				players.push_back(Player(NULL,
+				                         joy,
+				                         config.getJoystick(SDL_JoystickName(i))));
+		}
 	}
 	//"Joystick" players ok let's add "keyboard" players.
 	unsigned numKbd(config.getNbKbd());
@@ -152,40 +158,41 @@ void InputController::process(void)
 		uint32 num = 0;
 		static bool8_32 TURBO = FALSE;
 		SDL_Event event;
+		Player* player;
 
 		if (SDL_WaitEvent(&event))
 		{
 			boost::mutex::scoped_lock lock(mutex);
 			switch(event.type)
 			{
-			case SDL_JOYBUTTONDOWN: //event.jbutton.which = player index
-				if (event.jbutton.which < players.size())
-					players[event.jbutton.which].setButton(event.jbutton.button, true);
-				break;
+			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
-				if (event.jbutton.which < players.size())
-					players[event.jbutton.which].setButton(event.jbutton.button, false);
+				player = getPlayerByJoystick(event.jbutton.which);
+				if (player)
+					player->setButton(event.jbutton.button,
+					                  event.type == SDL_JOYBUTTONDOWN ? true:false);
 				break;
 			case SDL_JOYAXISMOTION:
-				if (event.jaxis.which < players.size())
+				player = getPlayerByJoystick(event.jaxis.which);
+				if (player)
 				{
 					switch(event.jaxis.axis)
 					{
 					case JA_LR:
 						if(event.jaxis.value == 0)
-							players[event.jaxis.which].setAxis(JA_LR, CENTER);
+							player->setAxis(JA_LR, CENTER);
 						else if(event.jaxis.value > 0)
-							players[event.jaxis.which].setAxis(JA_LR, RIGHT);
+							player->setAxis(JA_LR, RIGHT);
 						else
-							players[event.jaxis.which].setAxis(JA_LR, LEFT);
+							player->setAxis(JA_LR, LEFT);
 						break;
 					case JA_UD:
 						if(event.jaxis.value == 0)
-							players[event.jaxis.which].setAxis(JA_UD, CENTER);
+							player->setAxis(JA_UD, CENTER);
 						else if(event.jaxis.value > 0)
-							players[event.jaxis.which].setAxis(JA_UD, DOWN);
+							player->setAxis(JA_UD, DOWN);
 						else
-							players[event.jaxis.which].setAxis(JA_UD, UP);
+							player->setAxis(JA_UD, UP);
 						break;
 					}
 				}
@@ -225,3 +232,22 @@ void InputController::process(void)
 		}
 	}
 }
+
+
+Player* InputController::getPlayerByJoystick(int joystickIndex)
+{
+	if (joystickIndex < 0)
+		return NULL;
+	else
+	{
+		std::vector<Player>::iterator it(std::find_if(players.begin(),
+		                                              players.end(),
+		                                              boost::bind(&Player::hasJoystick,
+		                                                          _1, joystickIndex)));
+		if (it == players.end())
+			return NULL;
+		else
+			return &(*it);
+	}
+}
+

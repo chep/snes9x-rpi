@@ -60,6 +60,7 @@ public:
 
 private:
 	void process(void);
+	Player* getPlayerByJoystick(int joystickIndex);
 
 private:
 	InputConfig config;

@@ -70,6 +70,8 @@ public:
 	boost::uint32_t getControllerState(const Uint8 *keyboardState) const throw (ExitException);
 	void setButton(unsigned button, bool state) {(*joystick)[button] = state;}
 	void setAxis(JOYSTICK_AXIS axis, int state) {(*joystick)[axis] = state;}
+	
+	bool hasJoystick(int joystickIndex);
 
 private:
 	KeyboardMapping *kmap;

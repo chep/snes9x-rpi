@@ -123,3 +123,13 @@ boost::uint32_t Player::getControllerState(const Uint8 *keyboardState) const thr
 
 	return state;
 }
+
+
+bool Player::hasJoystick(int joystickIndex)
+{
+	if (joystick)
+		return joystick->getSDLIndex() == joystickIndex;
+	else
+		return false;
+}
+
