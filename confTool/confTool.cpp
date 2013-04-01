@@ -234,44 +234,49 @@ static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> c
 		SDL_Joystick *joy = SDL_JoystickOpen(i);
 		if (joy)
 		{
-			AvailableJoystick *avJ(conf->getJoystick(SDL_JoystickName(i)));
-			if (avJ->getName() == JOYSTICK_DEFAULT_NAME) //Not found in config
-				avJ = conf->addJoystick(SDL_JoystickName(i));
-
-			clearScreen(infos.screen);
-			displayMessage(infos, 0, 0,
-			               std::string("Configuration of: ") + SDL_JoystickName(i));
-
-			for (int b = JB_A; b < JB_NB_BUTTONS; b++)
+			if (SDL_JoystickNumAxes(joy) > 6)
+				SDL_JoystickClose(joy);
+			else
 			{
-				SDL_Event event;
-				bool ok(false);
-				displayMessage(infos, 0, b * 15 + 15,
-				               "Press " + conversion[b] +" button, [Esc] to disable this button.");
-				while(!ok)
+				AvailableJoystick *avJ(conf->getJoystick(SDL_JoystickName(i)));
+				if (avJ->getName() == JOYSTICK_DEFAULT_NAME) //Not found in config
+					avJ = conf->addJoystick(SDL_JoystickName(i));
+
+				clearScreen(infos.screen);
+				displayMessage(infos, 0, 0,
+				               std::string("Configuration of: ") + SDL_JoystickName(i));
+
+				for (int b = JB_A; b < JB_NB_BUTTONS; b++)
 				{
-					if (!SDL_WaitEvent(&event))
-						std::cerr<<"SDL_WaitEvent error: "<<SDL_GetError()<<std::endl;
-					switch(event.type)
+					SDL_Event event;
+					bool ok(false);
+					displayMessage(infos, 0, b * 15 + 15,
+					               "Press " + conversion[b] +" button, [Esc] to disable this button.");
+					while(!ok)
 					{
-					case SDL_JOYBUTTONDOWN:
-						if (event.jbutton.which == i)
+						if (!SDL_WaitEvent(&event))
+							std::cerr<<"SDL_WaitEvent error: "<<SDL_GetError()<<std::endl;
+						switch(event.type)
 						{
-							(*avJ)[(JOYSTICK_BUTTON)b] = event.jbutton.button;
-							std::cout<<conversion[b]<<" is assigned to "<<(int)event.jbutton.button<<std::endl;
-							ok = true;
+						case SDL_JOYBUTTONDOWN:
+							if (event.jbutton.which == i)
+							{
+								(*avJ)[(JOYSTICK_BUTTON)b] = event.jbutton.button;
+								std::cout<<conversion[b]<<" is assigned to "<<(int)event.jbutton.button<<std::endl;
+								ok = true;
+							}
+							break;
+						case SDL_KEYDOWN:
+							if (event.key.keysym.sym == SDLK_ESCAPE)
+							{
+								(*avJ)[(JOYSTICK_BUTTON)b] = 255;
+								std::cout<<conversion[b]<<" is disabled "<<std::endl;
+								ok = true;
+							}
+							break;
+						default:
+							break;
 						}
-						break;
-					case SDL_KEYDOWN:
-						if (event.key.keysym.sym == SDLK_ESCAPE)
-						{
-							(*avJ)[(JOYSTICK_BUTTON)b] = 255;
-							std::cout<<conversion[b]<<" is disabled "<<std::endl;
-							ok = true;
-						}
-						break;
-					default:
-						break;
 					}
 				}
 			}
