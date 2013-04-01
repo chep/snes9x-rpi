@@ -111,6 +111,7 @@ public:
 
 	std::string getName() const {return mapping->getName();}
 
+	int getSDLIndex() const {if(sdlJoy) return SDL_JoystickIndex(sdlJoy); else return -1;}
 
 private:
 	SDL_Joystick *sdlJoy;
