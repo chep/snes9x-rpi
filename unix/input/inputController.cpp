@@ -68,9 +68,15 @@ InputController::InputController() throw (SnesException):
 	{
 		SDL_Joystick *joy = SDL_JoystickOpen(i);
 		if(joy)
-			players.push_back(Player(NULL,
-			                         joy,
-			                         config.getJoystick(SDL_JoystickName(i))));
+		{
+			//Check if keyboard is not detected as a joystick
+			if (SDL_JoystickNumAxes(joy) > 6)
+				SDL_JoystickClose(joy);
+			else
+				players.push_back(Player(NULL,
+				                         joy,
+				                         config.getJoystick(SDL_JoystickName(i))));
+		}
 	}
 	//"Joystick" players ok let's add "keyboard" players.
 	unsigned numKbd(config.getNbKbd());
