@@ -77,11 +77,7 @@
 #undef TRUE
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <fcntl.h>
+#include <iostream>
 
 #define CLIP16(v) \
 	if ((v) < -32768) \
@@ -871,11 +867,7 @@ void DecodeBlock (Channel *ch)
 
 void MixStereo (int sample_count)
 {
-#if defined(TARGET_OS_MAC) && TARGET_OS_MAC
     static int wave[SOUND_BUFFER_SIZE];
-#else
-    int wave[SOUND_BUFFER_SIZE];
-#endif
     int pitch_mod = SoundData.pitch_mod & ~APU.DSP[APU_NON];
 	
     for (uint32 J = 0; J < NUM_CHANNELS; J++) 

@@ -41,20 +41,15 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <ctype.h>
 #include <dirent.h>
 #include <SDL/SDL.h>
 
 #undef USE_THREADS
 #define USE_THREADS
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
@@ -903,7 +898,7 @@ static long power (int num, int pow)
 
 static int Rates[8] =
 {
-    0, 8192, 11025, 16000, 22050, 29300, 36600, 44000
+    0, 8192, 11025, 16000, 22050, 29300, 36600, 44100
 };
 
 static int BufferSizes [8] =

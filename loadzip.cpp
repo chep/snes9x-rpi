@@ -44,7 +44,6 @@
 /* This file contains a function for loading a SNES ROM image from a zip file		      */
 /**********************************************************************************************/
 
-#include <string.h>
 #include <ctype.h>
 
 #ifndef NO_INLINE_SET_GET
@@ -56,8 +55,6 @@
 
 #include "unzip.h"
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 bool8 LoadZip(const char* zipname,
 	      int32 *TotalFileSize,

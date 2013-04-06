@@ -66,10 +66,9 @@
    the bit lengths.  That routine and its comments are in the inflate.c
    module.
  */
-
+#include <stdlib.h>
 #include "unz.h"      /* this must supply the slide[] (byte) array */
 #include "unzipP.h"
-#include <stdlib.h>
 
 #ifndef WSIZE
 #  define WSIZE 0x8000  /* window size--must be a power of two, and at least

@@ -73,7 +73,6 @@
   Nintendo Co., Limited and its subsidiary companies.
 *******************************************************************************/
 #include <stdlib.h>
-
 #include "snes9x.h"
 #include "memmap.h"
 #include "ppu.h"

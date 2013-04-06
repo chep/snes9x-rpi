@@ -43,13 +43,9 @@
 #include <vector>
 #include <algorithm>
 
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <stdlib.h>
 #include <signal.h>
 
 #include <SDL/SDL.h>
