@@ -59,8 +59,8 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	snd_pcm_hw_params_t *hw_params;
 	unsigned int frequency;
 
-	if (mode >= sizeof(audioFrequencies))
-		mode = sizeof(audioFrequencies) - 1;
+	if (mode >= sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))
+		mode = (sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))- 1;
 	frequency = audioFrequencies[mode];
 	bufferSize = audioBufferSizes[mode];
 
@@ -80,13 +80,13 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 		std::cerr<<"Cannot allocate hardware parameter structure: "<<snd_strerror(err)<<std::endl;
 		throw -1;
 	}
-				 
+
 	if ((err = snd_pcm_hw_params_any(playback_handle, hw_params)) < 0)
 	{
 		std::cerr<<"Cannot initialize hardware parameter structure: "<<snd_strerror(err)<<std::endl;
 		goto error;
 	}
-	
+
 	err = snd_pcm_hw_params_set_access(playback_handle,
 	                                   hw_params,
 	                                   SND_PCM_ACCESS_RW_INTERLEAVED);
@@ -95,7 +95,7 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 		std::cerr<<"Cannot set access type: "<<snd_strerror(err)<<std::endl;
 		goto error;
 	}
-	
+
 	err = snd_pcm_hw_params_set_format(playback_handle,
 	                                   hw_params,
 	                                   SND_PCM_FORMAT_S16_LE);
@@ -104,14 +104,14 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 		std::cerr<<"Cannot set sample format: "<<snd_strerror(err)<<std::endl;
 		goto error;
 	}
-	
+
 	err = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &frequency, 0);
 	if (err < 0)
 	{
 		std::cerr<<"Cannot set sample rate: "<<snd_strerror (err)<<std::endl;
 		goto error;
 	}
-	
+
 	err = snd_pcm_hw_params_set_channels(playback_handle,
 	                                     hw_params,
 	                                     2);
@@ -120,13 +120,13 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 		std::cerr<<"Cannot set channel count: "<<snd_strerror(err)<<std::endl;
 		goto error;
 	}
-	
+
 	if ((err = snd_pcm_hw_params(playback_handle, hw_params)) < 0)
 	{
 		std::cerr<<"Cannot set parameters: "<<snd_strerror(err)<<std::endl;
 		goto error;
 	}
-	
+
 	if ((err = snd_pcm_prepare(playback_handle)) < 0)
 	{
 		std::cerr<<"Cannot prepare audio interface for use: "<<snd_strerror(err)<<std::endl;
@@ -170,11 +170,12 @@ SoundSystem::~SoundSystem()
 
 
 void SoundSystem::processSound()
-{	
+{
 	while (!terminated)
 	{
 		S9xMixSamplesO (audioBuffer, bufferSize,
 		                0);
+
 		snd_pcm_sframes_t err = snd_pcm_writei(playback_handle,
 		                                       audioBuffer,
 		                                       bufferSize/2);
