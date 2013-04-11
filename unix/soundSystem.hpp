@@ -42,11 +42,13 @@
 #include <boost/thread.hpp>
 #include <boost/cstdint.hpp>
 
+#include "exceptions.hpp"
+
 class SoundSystem
 {
 public:
 	SoundSystem(unsigned int mode = 7,
-	            std::string device = "default");
+	            std::string device = "default") throw (SnesException);
 	~SoundSystem(void);
 
 
