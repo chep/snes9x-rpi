@@ -40,6 +40,7 @@
 #define _EXCEPTIONS_HPP_
 
 #include <string>
+#include <alsa/asoundlib.h>
 
 class SnesException
 {
@@ -74,6 +75,19 @@ class SnesBadConfigFileException: public SnesException
 public:
 	SnesBadConfigFileException() : SnesException("Bad Config file") {}
 	virtual ~SnesBadConfigFileException() {}
+
+private:
+};
+
+
+class AlsaFreeParamsException: public SnesException
+{
+public:
+	AlsaFreeParamsException(snd_pcm_hw_params_t *hw_params, const std::string name) : SnesException(name)
+		{
+			snd_pcm_hw_params_free (hw_params);
+		}
+	virtual ~AlsaFreeParamsException() {}
 
 private:
 };

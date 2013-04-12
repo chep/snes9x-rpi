@@ -776,10 +776,11 @@ void InitTimer ()
     
     try
     {
-	    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "default");
+	    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "hw:0,0");
     }
-    catch (ExitException e)
+    catch (SnesException e)
     {
+	    std::cerr<<"Exception occurs during sound system init "<<e<<std::endl;
 	    S9xExit();
     }
 

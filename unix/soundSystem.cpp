@@ -49,7 +49,7 @@ static const unsigned int audioFrequencies[8] =
 static const unsigned int audioBufferSizes [8] =
 { 0, 256, 256, 256, 512, 512, 1024, 1024};
 
-SoundSystem::SoundSystem(unsigned int mode, std::string device):
+SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesException):
 	playback_handle(NULL),
 	audioBuffer(NULL),
 	threadProcess(NULL),
@@ -58,6 +58,7 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	int err;
 	snd_pcm_hw_params_t *hw_params;
 	unsigned int frequency;
+	const int periods = 2;
 
 	if (mode >= sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))
 		mode = (sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))- 1;
@@ -68,72 +69,82 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	                   device.c_str(),
 	                   SND_PCM_STREAM_PLAYBACK,
 	                   0);
+
 	if(err < 0)
-	{
-		std::cerr<<"Cannot open audio device "<<device<<": "<<snd_strerror (err)<<std::endl;
-		throw -1;
-	}
+		throw SnesException(std::string("Cannot open audio device: ") + snd_strerror(err));
 
-
+	/* Initialize parameters */
 	if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0)
-	{
-		std::cerr<<"Cannot allocate hardware parameter structure: "<<snd_strerror(err)<<std::endl;
-		throw -1;
-	}
+		throw SnesException(std::string("Cannot allocate hardware parameter structure: ") + snd_strerror(err));
 
 	if ((err = snd_pcm_hw_params_any(playback_handle, hw_params)) < 0)
-	{
-		std::cerr<<"Cannot initialize hardware parameter structure: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot initialize hardware parameter structure: ")
+		                              + snd_strerror(err));
 
+	/* Access type */
 	err = snd_pcm_hw_params_set_access(playback_handle,
 	                                   hw_params,
 	                                   SND_PCM_ACCESS_RW_INTERLEAVED);
 	if (err < 0)
-	{
-		std::cerr<<"Cannot set access type: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot set access type: ")
+		                              + snd_strerror(err));
 
+	/* Sample format */
 	err = snd_pcm_hw_params_set_format(playback_handle,
 	                                   hw_params,
 	                                   SND_PCM_FORMAT_S16_LE);
 	if (err < 0)
-	{
-		std::cerr<<"Cannot set sample format: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot set sample format: ")
+		                              + snd_strerror(err));
 
+	/* Rate */
 	err = snd_pcm_hw_params_set_rate_near(playback_handle, hw_params, &frequency, 0);
 	if (err < 0)
-	{
-		std::cerr<<"Cannot set sample rate: "<<snd_strerror (err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot set sample rate: ")
+		                              + snd_strerror (err));
 
+	/* Channel count */
 	err = snd_pcm_hw_params_set_channels(playback_handle,
 	                                     hw_params,
 	                                     2);
 	if (err < 0)
-	{
-		std::cerr<<"Cannot set channel count: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot set channel count: ")
+		                              + snd_strerror(err));
 
+	/* Set number of periods. */
+	if (snd_pcm_hw_params_set_periods(playback_handle, hw_params, periods, 0) < 0)
+	    throw AlsaFreeParamsException(hw_params,
+	                                  std::string("Cannot set periods: ")
+	                                  + snd_strerror(err));
+
+	/* Set buffer size */
+	snd_pcm_uframes_t frameSize = (bufferSize * periods);
+	err = snd_pcm_hw_params_set_buffer_size_near(playback_handle,
+	                                             hw_params,
+	                                             &frameSize);
+	if (err < 0)
+	    throw AlsaFreeParamsException(hw_params,
+	                                  std::string("Cannot set buffer size: ")
+	                                  + snd_strerror(err));
+
+	/* Apply parameters */
 	if ((err = snd_pcm_hw_params(playback_handle, hw_params)) < 0)
-	{
-		std::cerr<<"Cannot set parameters: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot set parameters: ")
+		                              + snd_strerror(err));
 
 	if ((err = snd_pcm_prepare(playback_handle)) < 0)
-	{
-		std::cerr<<"Cannot prepare audio interface for use: "<<snd_strerror(err)<<std::endl;
-		goto error;
-	}
+		throw AlsaFreeParamsException(hw_params,
+		                              std::string("Cannot prepare audio interface for use: ")
+		                              + snd_strerror(err));
 
 	snd_pcm_hw_params_free (hw_params);
+
 
 	audioBuffer = new boost::int16_t[bufferSize];
 	if (!audioBuffer)
@@ -146,10 +157,6 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device):
 	threadProcess = new boost::thread(boost::bind(&SoundSystem::processSound, this));
 
 	return;
-
-error:
-	snd_pcm_hw_params_free (hw_params);
-	throw -1;
 }
 
 SoundSystem::~SoundSystem()
