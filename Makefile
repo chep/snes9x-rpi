@@ -21,7 +21,7 @@ $(UNZIPDEFINES) \
 
 CFLAGS=$(CXXFLAGS)
 
-LDFLAGS=-lboost_serialization -lSDL -lstdc++ -lz -lpthread -lSDL_ttf -lboost_thread -lasound
+LDFLAGS=-lboost_serialization -lSDL -lstdc++ -lz -lSDL_ttf -lboost_thread -lasound -lboost_system
 
 SNES9X_SRC = $(wildcard *.cpp)
 SNES9X_SRC += $(wildcard unix/*.cpp)
@@ -46,11 +46,11 @@ all: snes9x confTool/confTool
 
 snes9x: $(SNES9X_OBJ)
 	@echo [LD] $@
-	@$(CXX) $(LIBDIRS) $(LDFLAGS) -o $@ $^
+	@$(CXX) -o $@ $^ $(LIBDIRS) $(LDFLAGS)
 
 confTool/confTool: $(CONFTOOL_OBJ)
 	@echo [LD] $@
-	@$(CXX) $(LIBDIRS) $(LDFLAGS) -o $@ $^
+	@$(CXX) -o $@ $^ $(LIBDIRS) $(LDFLAGS) 
 
 clean:
 	find -name '*.o' -delete
