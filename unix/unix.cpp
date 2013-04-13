@@ -270,12 +270,14 @@ int main (int argc, char **argv)
 	    try
 	    {
 		    InputConfig tmp(true); //Create new config file
-		    tmp.save();
+		    tmp.save(std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE);
 		    inputController = new InputController();
 	    }
 	    catch (...)
 	    {
-		    std::cerr<<"Unable to create a default configuration file. Check permissions"<<std::endl;
+		    std::cerr<<"Unable to create a default configuration file."<<std::endl;
+		    std::cerr<<"Check permissions of ";
+		    std::cerr<<std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE<<std::endl;
 		    S9xExit();
 	    }
     }

@@ -52,6 +52,7 @@ extern struct SPPU PPU;
 
 
 InputController::InputController() throw (SnesException):
+	config(std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE),
 	threadProcess(NULL),
 	keyboardState(SDL_GetKeyState(NULL))
 {

@@ -25,6 +25,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <boost/shared_ptr.hpp>
+#include <sys/stat.h>
 
 #include "inputConfig.hpp"
 
@@ -71,6 +72,9 @@ static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> c
 static void configureKeyboard(SDLInfos &infos,
                               boost::shared_ptr<InputConfig> conf,
                               unsigned nbKeyboards);
+static std::string getHomeDirectory ();
+static std::string getSnapshotDirectory ();
+
 
 int main(int argc, char **argv)
 {
@@ -89,8 +93,8 @@ int main(int argc, char **argv)
 
 	try
 	{
-		conf = boost::shared_ptr<InputConfig>(new InputConfig(std::string("../")
-		                                                      + INPUT_CONFIG_DEFAULT_FILE));
+		conf = boost::shared_ptr<InputConfig>(new InputConfig(std::string(getSnapshotDirectory())
+		                                                      + "/" + INPUT_CONFIG_DEFAULT_FILE));
 	}
 	catch (...)
 	{
@@ -113,7 +117,7 @@ int main(int argc, char **argv)
 
 	try
 	{
-		conf->save(std::string("../") + INPUT_CONFIG_DEFAULT_FILE);
+		conf->save(std::string(getSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE);
 	}
 	catch (SnesException e)
 	{
@@ -320,4 +324,26 @@ static void configureKeyboard(SDLInfos &infos,
 			}
 		}
 	}
+}
+
+
+static std::string getHomeDirectory ()
+{
+	return std::string(getenv ("HOME"));
+}
+
+static std::string getSnapshotDirectory ()
+{
+    const char *snapshot;
+    
+    if (!(snapshot = getenv ("SNES9X_SNAPSHOT_DIR"))
+        && !(snapshot = getenv ("SNES96_SNAPSHOT_DIR")))
+    {
+	    std::string dir(getHomeDirectory() + "/.snes96_snapshots");
+	    mkdir (dir.c_str(), 0750);
+	    chown (dir.c_str(), getuid (), getgid ());
+	    return dir;
+    }
+    else
+	    return std::string(snapshot);
 }
