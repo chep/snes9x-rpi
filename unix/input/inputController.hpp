@@ -57,8 +57,6 @@ public:
 public:
 	boost::uint32_t getControllerState(unsigned player) throw (ExitException);
 	void checkGlobal(void) throw (ExitException);
-
-private:
 	void process(void);
 	Player* getPlayerByJoystick(int joystickIndex);
 
@@ -67,8 +65,5 @@ private:
 	Uint8 *keyboardState;
 
 	std::vector<Player> players;
-
-	boost::thread *threadProcess;
-	boost::mutex mutex;
 };
 #endif
