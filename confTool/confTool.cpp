@@ -33,6 +33,8 @@
 #include "snes9x.h"
 #include "keyboard.hpp"
 
+#define FONT_FILE "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
+
 struct SDLInfos
 {
 	TTF_Font *font;
@@ -152,7 +154,7 @@ bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos)
 	if( TTF_Init() == -1 )
 		return false;
 
-	infos->font = TTF_OpenFont("FreeMono.ttf", 12);
+	infos->font = TTF_OpenFont(FONT_FILE, 12);
 	if( infos->font == NULL ) 
 		return false;
 
@@ -296,11 +298,12 @@ static void configureKeyboard(SDLInfos &infos,
 	for (unsigned i = 0; i < nbKeyboards; i++)
 	{
 		KeyboardMapping *kmap(conf->addKbdMap());
-		std::ostringstream oss("Keyboard configuration number ");
-		oss<<i;
+		std::ostringstream oss;
+		oss<<i + 1;
 		oss<<": ";
 		clearScreen(infos.screen);
-		displayMessage(infos, 0, 0, oss.str());
+		displayMessage(infos, 0, 0,
+		               "Keyboard configuration number " + oss.str());
 
 		for (unsigned k = 0; k < KEY_NB_KEYS; ++k)
 		{
