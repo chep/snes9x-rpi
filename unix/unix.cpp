@@ -376,45 +376,7 @@ int main (int argc, char **argv)
 
     while (1)
     {
-#ifndef _ZAURUS
-	if (!Settings.Paused
-#ifdef DEBUGGER
-	    || (CPU.Flags & (DEBUG_MODE_FLAG | SINGLE_STEP_FLAG))
-#endif
-           )
-#endif
 	    S9xMainLoop ();
-#ifndef _ZAURUS
-	if (Settings.Paused
-#ifdef DEBUGGER
-	    || (CPU.Flags & DEBUG_MODE_FLAG)
-#endif
-           )
-	{
-	    S9xSetSoundMute (TRUE);
-	}
-
-#ifdef DEBUGGER
-	if (CPU.Flags & DEBUG_MODE_FLAG)
-	{
-	    S9xDoDebug ();
-	}
-	else
-#endif
-	if (Settings.Paused)
-	    S9xProcessEvents (TRUE);
-
-//	S9xProcessEvents (FALSE);
-
-	if (!Settings.Paused
-#ifdef DEBUGGER
-	    && !(CPU.Flags & DEBUG_MODE_FLAG)
-#endif	    
-           )
-	{
-	    S9xSetSoundMute (FALSE);
-	}
-#endif
     }
     return (0);
 }
@@ -807,6 +769,17 @@ void InitTimer ()
 
 void S9xSyncSpeed ()
 {
+	try
+	{
+		inputController->process();
+		inputController->checkGlobal();
+	}
+	catch (ExitException e)
+	{
+		S9xExit();
+	}
+
+
     if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
     {
 	static struct timeval next1 = {0, 0};
