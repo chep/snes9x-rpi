@@ -2537,13 +2537,20 @@ void S9xUpdateJoypads(struct InternalPPU *ippu)
 {
 	int i = 0;
 
-	for (i = 0; i < 5; i++)
+	try
 	{
-		ippu->Joypads[i] = inputController->getControllerState(i);
-		if (ippu->Joypads[i] & SNES_LEFT_MASK)
-			ippu->Joypads[i] &= ~SNES_RIGHT_MASK;
-		if (ippu->Joypads[i] & SNES_UP_MASK)
-			ippu->Joypads[i] &= ~SNES_DOWN_MASK;
+		for (i = 0; i < 5; i++)
+		{
+			ippu->Joypads[i] = inputController->getControllerState(i);
+			if (ippu->Joypads[i] & SNES_LEFT_MASK)
+				ippu->Joypads[i] &= ~SNES_RIGHT_MASK;
+			if (ippu->Joypads[i] & SNES_UP_MASK)
+				ippu->Joypads[i] &= ~SNES_DOWN_MASK;
+		}
+	}
+	catch (ExitException)
+	{
+		S9xExit();
 	}
 
 #ifndef _ZAURUS
