@@ -57,5 +57,10 @@ clean:
 	find -name '*.d' -delete
 	rm -f snes9x confTool/confTool
 
+install:
+	install -d $(DESTDIR)/usr/bin
+	install confTool/confTool $(DESTDIR)/usr/bin
+	install snes9x $(DESTDIR)/usr/bin
+
 include $(SNES9X_OBJ:.o=.d)
 include $(CONFTOOL_OBJ:.o=.d)
