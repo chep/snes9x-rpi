@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Exemple de debian/rules utilisant debhelper.
+# Ce fichier a initialement été écrit par Joey Hess et Craig Small.
+# En tant qu'exception particulière, lorsque ce fichier est copié
+# par dh-make dans un fichier de sortie dh-make, vous pouvez
+# utiliser ce fichier sans restriction. Cette exception particulière
+# a été ajoutée par Craig Small dans la version 0.37 de dh-make.
+
+# Décommentez la ligne suivante pour le mode volubile.
+#export DH_VERBOSE=1
+
+export DESTDIR=debian/install
+
+%:
+		dh $@

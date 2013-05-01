@@ -1,0 +1,48 @@
+snes9x-rpi (0.2) unstable; urgency=low
+
+  [ Cédric Chépied ]
+  * Multi controller version.
+
+  [ badman12345 ]
+  * Update unix.cpp
+
+  [ chep ]
+  * Remove OSS and use ALSA.
+  * Alsa: link against libasound
+  * Make PluggedJoystick noncopyable
+  * Sound system: make alsa working
+  * Dynamic keyboard configuration
+  * Input management.
+  * Use type long for addresses.
+  * Fix makefile
+  * GPL headers
+  * Input controller: free memory at exit
+  * Sound system: free memory at exit.
+  * Sound system: clean exit
+  * Clean exit on signal.
+  * Bad configuration file management
+  * Default config modification
+  * Readme: palerider reference added.
+  * Input controller: check joystick before adding it
+  * ConfTool: check joystick before adding it
+  * Input: don't use SDL joystick index as player index
+  * SoundSystem: fix mode verification
+  * All: Remove useless includes
+  * SoundSystem: fix delay
+
+  [ Cédric Chépied ]
+
+ -- Cédric Chépied <cedric.chepied@gmail.com>  Wed, 01 May 2013 11:56:13 +0200
+
+snes9x-rpi (0.1) unstable; urgency=low
+
+  * Multi controller version.
+
+ -- Cédric Chépied <cedric.chepied@gmail.com>  Wed, 01 May 2013 11:54:50 +0200
+
+snes9x-rpi (0.0) unstable; urgency=low
+
+  [ Cédric Chépied ]
+  * Initial release.
+
+ -- Cédric Chépied <cedric.chepied@gmail.com>  Mon, 25 Feb 2013 12:24:05 +0100

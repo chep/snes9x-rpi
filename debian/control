@@ -1,0 +1,12 @@
+Source: snes9x-rpi
+Priority: extra
+Maintainer: Cédric Chépied <cedric.chepied@ggmail.com>
+Build-Depends: debhelper (>= 7), fonts-freefont-ttf, libboost-serialization-dev, libboost-thread-dev, libboost-system-dev, libsdl1.2-dev, libsdl-ttf2.0-dev, libasound2-dev
+Standards-Version: 0.2
+Section: emulators
+Homepage: https://github.com/chep/snes9x-rpi
+
+Package: snes9x-rpi
+Architecture: armhf
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Super Nes emulator for raspberrypi
