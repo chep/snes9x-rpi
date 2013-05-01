@@ -1,3 +1,20 @@
+snes9x-rpi (0.3) unstable; urgency=low
+
+  [ chep ]
+  * Makefile: modify ld flags
+  * Input configuration: move config file
+  * Remove input thread
+  * ConfTool: ttf path + display
+  * Fix savestates bug.
+  * InputController: catch ExitException
+
+  [ Cédric Chépied ]
+  * Makefile: add install target
+  * InputController: 360 controller compatibility
+  * Packaging: add debian packaging.
+
+ -- Cédric Chépied <cedric.chepied@gmail.com>  Wed, 01 May 2013 13:24:01 +0200
+
 snes9x-rpi (0.2) unstable; urgency=low
 
   [ Cédric Chépied ]
