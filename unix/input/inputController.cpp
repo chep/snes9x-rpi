@@ -185,6 +185,24 @@ void InputController::process(void)
 					break;
 				}
 			}
+			break;
+		//360 controller D-pad
+		case SDL_JOYHATMOTION:
+			player = getPlayerByJoystick(event.jhat.which);
+			if (player)
+			{
+				player->setAxis(JA_LR, CENTER);
+				player->setAxis(JA_UD, CENTER);
+				if (event.jhat.value & SDL_HAT_UP)
+					player->setAxis(JA_UD, UP);
+				if (event.jhat.value & SDL_HAT_DOWN)
+					player->setAxis(JA_UD, DOWN);
+				if (event.jhat.value & SDL_HAT_RIGHT)
+					player->setAxis(JA_LR, RIGHT);
+				if (event.jhat.value & SDL_HAT_LEFT)
+					player->setAxis(JA_LR, LEFT);
+			}
+			break;
 		case SDL_KEYDOWN:
 			keyboardState = SDL_GetKeyState(NULL);
 
