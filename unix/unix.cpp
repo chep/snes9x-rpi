@@ -66,17 +66,12 @@
 #include "cpuexec.h"
 #include "ppu.h"
 #include "snapshot.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "display.h"
 #include "gfx.h"
 #include "soundux.h"
 #include "spc700.h"
 #include "joystick.hpp"
-#include "soundSystem.hpp"
-#include "inputController.hpp"
-
-SoundSystem *sndSys(NULL);
-InputController *inputController(NULL);
 
 // rPi port: added all this joystick stuff
 // If for some unfathomable reason your joystick has more than 32 buttons or 8 
@@ -97,7 +92,6 @@ extern SDL_Surface *screen;
 
 static uint32 ffc = 0;
 bool8_32 nso = FALSE, vga = FALSE;
-uint32 xs = 320, ys = 240, cl = 0, cs = 0, mfs = 10;
  
 
 char *rom_filename = NULL;
@@ -127,123 +121,33 @@ Snes9X: Memory allocation failure - not enough RAM/virtual memory available.\n\
     exit (1);
 }
 
-void S9xParseArg (char **argv, int &i, int argc)
-{
-
-    if (strcasecmp (argv [i], "-b") == 0 ||
-	     strcasecmp (argv [i], "-bs") == 0 ||
-	     strcasecmp (argv [i], "-buffersize") == 0)
-    {
-	if (i + 1 < argc)
-	    Settings.SoundBufferSize = atoi (argv [++i]);
-	else
-	    S9xUsage ();
-    }
-    else if (strcmp (argv [i], "-l") == 0 ||
-	     strcasecmp (argv [i], "-loadsnapshot") == 0)
-    {
-	if (i + 1 < argc)
-	    snapshot_filename = argv [++i];
-	else
-	    S9xUsage ();
-    }
-    else if (strcmp (argv [i], "-nso") == 0)
-		nso = TRUE;
-    else if (strcmp (argv [i], "-x2") == 0)
-		vga = TRUE;
-    else if (strcmp (argv [i], "-xs") == 0)
-    {
-	if (i + 1 < argc)
-	    xs = atoi(argv [++i]);
-	else
-	    S9xUsage ();
-	}
-    else if (strcmp (argv [i], "-ys") == 0)
-    {
-	if (i + 1 < argc)
-	    ys = atoi(argv [++i]);
-	else
-	    S9xUsage ();
-	}
-    else if (strcmp (argv [i], "-cl") == 0)
-    {
-	if (i + 1 < argc)
-	    cl = atoi(argv [++i]);
-	else
-	    S9xUsage ();
-	}
-    else if (strcmp (argv [i], "-cs") == 0)
-    {
-	if (i + 1 < argc)
-	    cs = atoi(argv [++i]);
-	else
-	    S9xUsage ();
-	}
-    else if (strcmp (argv [i], "-mfs") == 0)
-    {
-	if (i + 1 < argc)
-	    mfs = atoi(argv [++i]);
-	else
-	    S9xUsage ();
-	}
-    else
-	    S9xUsage ();
-//	S9xParseDisplayArg (argv, i, argc);
-}
 
 /*#include "cheats.h"*/
 extern "C"
 int main (int argc, char **argv)
 {
-    if (argc < 2)
-	    S9xUsage ();
+	std::vector<std::string> arguments;
+	Emulator *emulator(NULL);
 
-    ZeroMemory (&Settings, sizeof (Settings));
+	for (int i = 1; i < argc; ++i)
+		arguments.push_back(argv[i]);
 
-    Settings.JoystickEnabled = TRUE; // rPi changed default
-    Settings.SoundPlaybackRate = 7;
-    Settings.Stereo = TRUE;
-    Settings.SoundBufferSize = 256;
-    Settings.CyclesPercentage = 100;
-    Settings.DisableSoundEcho = FALSE;
-    Settings.APUEnabled = Settings.NextAPUEnabled = TRUE;
-    Settings.H_Max = SNES_CYCLES_PER_SCANLINE;
-    Settings.SkipFrames = AUTO_FRAMERATE;
-    Settings.ShutdownMaster = TRUE;
-    Settings.FrameTimePAL = 20000;
-    Settings.FrameTimeNTSC = 16667;
-    Settings.FrameTime = Settings.FrameTimeNTSC;
-    Settings.DisableSampleCaching = FALSE;
-    Settings.DisableMasterVolume = FALSE;
-    Settings.Mouse = FALSE;
-    Settings.SuperScope = FALSE;
-    Settings.MultiPlayer5 = FALSE;
-//    Settings.ControllerOption = SNES_MULTIPLAYER5;
-    Settings.ControllerOption = 0;
-    Settings.Transparency = TRUE;
-    Settings.SixteenBit = TRUE;
-    Settings.SupportHiRes = FALSE;
-    Settings.NetPlay = FALSE;
-    Settings.ServerName [0] = 0;
-    Settings.ThreadSound = TRUE;
-    Settings.AutoSaveDelay = 30;
-    Settings.ApplyCheats = TRUE;
-    Settings.TurboMode = FALSE;
-    Settings.TurboSkipFrames = 15;
-    rom_filename = S9xParseArgs (argv, argc);
+	try
+	{
+		emulator = new Emulator(arguments);
 
-//    Settings.Transparency = Settings.ForceTransparency;
-    if (Settings.ForceNoTransparency)
-	Settings.Transparency = FALSE;
-
-    if (Settings.Transparency)
-	Settings.SixteenBit = TRUE;
-
-    Settings.HBlankStart = (256 * Settings.H_Max) / SNES_HCOUNTER_MAX;
+	}
+	catch (SnesException e)
+	{
+		std::cerr<<"Exception occurs: "<<e<<std::endl;
+	}
+	
+	if (emulator)
+		delete emulator;
 
 
-    if (!Memory.Init () || !S9xInitAPU())
-	OutOfMemory ();
+
+
 
    (void) S9xInitSound (Settings.SoundPlaybackRate, Settings.Stereo,
 			 Settings.SoundBufferSize);
@@ -829,7 +733,7 @@ void S9xSyncSpeed ()
     }
     else
     {
-	if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames
+	    if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames /* changer turboskipFrames en #define */
 						    : Settings.SkipFrames))
 	{
 	    IPPU.FrameSkip = 0;

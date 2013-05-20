@@ -85,7 +85,7 @@
 #include "cpuexec.h"
 #include "missing.h"
 #include "dma.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "gfx.h"
 #include "sa1.h"
 #include "spc7110.h"

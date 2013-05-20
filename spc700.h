@@ -84,23 +84,6 @@
 #define APUSetFlags(f)   (areg->P |=  (f))
 #define APUCheckFlag(f)  (areg->P &   (f))
 
-typedef union
-{
-#ifdef LSB_FIRST
-    struct { uint8 A, Y; } B;
-#else
-    struct { uint8 Y, A; } B;
-#endif
-    uint16 W;
-} YAndA;
-
-struct SAPURegisters{
-    uint16_32	PC;
-    uint8_32	P;
-    YAndA		YA;
-    uint8_32	X;
-    uint8_32	S;
-};
 
 /*
 struct SAPURegisters{

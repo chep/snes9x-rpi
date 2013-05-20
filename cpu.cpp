@@ -44,7 +44,7 @@
 #include "dsp1.h"
 #include "cpuexec.h"
 #include "debug.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "dma.h"
 #include "sa1.h"
 #include "cheats.h"

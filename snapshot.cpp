@@ -52,7 +52,7 @@
 #include "ppu.h"
 #include "cpuexec.h"
 #include "display.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "soundux.h"
 #include "sa1.h"
 #include "srtc.h"

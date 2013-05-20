@@ -41,48 +41,129 @@
 #ifndef _apu_h_
 #define _apu_h_
 
+#include <vector>
+
 #include "spc700.h"
 #include "port.h"
 
-struct SIAPU
+
+typedef union
 {
-    uint8		*PC;
-    uint8		*RAM;
-    uint8		*DirectPage;
-    bool8_32	APUExecuting;
-    uint8_32	Bit;
-    uint32		Address;
-    uint8		*WaitAddress1;
-    uint8		*WaitAddress2;
-    uint32		WaitCounter;
-    uint8		*ShadowRAM;
-    uint8		*CachedSamples;
-    uint8_32	_Carry;
-    uint8_32	_Zero;
-    uint8_32	_Overflow;
-    uint32		TimerErrorCounter;
-    uint32		Scanline;
-    int32		OneCycle;
-    int32		TwoCycles;
+#ifdef LSB_FIRST
+    struct { uint8 A, Y; } B;
+#else
+    struct { uint8 Y, A; } B;
+#endif
+    uint16 W;
+} YAndA;
+
+
+
+class IAPU
+{
+public:
+	IAPU(uint8 RAMInitialValue); /**<Constructor. Allocate memory. */
+	virtual ~IAPU(); /**< Destructor.*/
+
+public:
+	/** Give or set RAM at a specific index.
+	    @param[in] i index in RAM
+	    @return a reference to the element of the RAM at index.
+	*/
+	uint8& operator[](unsigned i) {return RAM[i];}
+
+public:
+	void reset(); /**<Reset all attributes. */
+	void setCarry(bool c) {carry = c;}
+	void setZero(bool z) {zero = z;}
+	void setOverflow(bool o) {overflow = o;}
+	void setAPUExecuting(bool e) {APUExecuting = e;}
+	int32 getOneCycle() const {return oneCycle;}
+
+private:
+    std::vector<uint8> RAM;
+	std::vector<uint8>::iterator PC;
+    std::vector<uint8>::iterator directPage;
+    bool        APUExecuting;
+    uint8_32	bit;
+    uint32		address;
+    uint8		*waitAddress1;
+    uint8		*waitAddress2;
+    uint32		waitCounter;
+    std::vector<uint8> shadowRAM;
+    std::vector<uint8> cachedSamples;
+    bool  	    carry;
+    bool        zero;
+    bool        overflow;
+    uint32		timerErrorCounter;
+    uint32		scanline;
+    int32		oneCycle;
+    int32		twoCycles;
+
+    uint8 RAMInitialValue;
 };
 
-struct SAPU
+
+class APU
 {
-    int32		Cycles;
-    bool8_32	ShowROM;
-    uint8_32	Flags;
-    uint8		KeyedChannels;
-    uint8		OutPorts [4];
-    uint8		DSP [0x80];
-    uint8		ExtraRAM [64];
-    uint16_32	Timer [3];
-    uint16_32	TimerTarget [3];
-    bool8_32	TimerEnabled [3];
-    bool8_32	TimerValueWritten [3];
+public:
+	APU();
+	~APU();
+
+public:
+	void reset(); /**<Reset all attributes. */
+	uint8_32 getP() const {return registers.P;}
+	void setCycles(int32 iapuOneCycle);
+	void setDSP (uint8 byte, IAPU& iapu);
+
+private:
+	struct Registers
+	{
+		uint16_32	PC;
+		uint8_32	P;
+		YAndA		YA;
+		uint8_32	X;
+		uint8_32	S;
+	};
+
+private:
+    int32		cycles;
+    bool        showROM;
+    uint8_32	flags;
+    uint8		keyedChannels;
+    std::vector<uint8> outPorts;
+    std::vector<uint8> DSP;
+    std::vector<uint8> extraRAM;
+    std::vector<uint16_32> timer;
+    std::vector<uint16_32> timerTarget;
+    std::vector<bool> timerEnabled;
+    std::vector<bool> timerValueWritten;
+
+    Registers registers;
+	std::vector<int32> vCycles;
 };
 
-EXTERN_C struct SAPU APU;
-EXTERN_C struct SIAPU IAPU;
+
+class APUController
+{
+public:
+	APUController(uint8 RAMInitialValue);
+
+public:
+	void reset(); /**<Reset all attributes. */
+
+private:
+	void unpackStatus();
+
+private:
+	IAPU iapu;
+	APU apu;
+
+	bool APUEnabled;
+	bool nextAPUEnabled;
+};
+
+
 /*
 STATIC inline void S9xAPUUnpackStatus()
 {
@@ -97,12 +178,6 @@ STATIC inline void S9xAPUPackStatus()
     APURegisters.P |= IAPU._Carry | ((IAPU._Zero == 0) << 1) |
 		      (IAPU._Zero & 0x80) | (IAPU._Overflow << 6);
 }*/
-#define S9xAPUUnpackStatus() \
-{ \
-    IAPU._Zero = ((APURegisters.P & Zero) == 0) | (APURegisters.P & Negative); \
-    IAPU._Carry = (APURegisters.P & Carry); \
-    IAPU._Overflow = (APURegisters.P & Overflow) >> 6; \
-}
 
 #define S9xAPUPackStatus() \
 { \
@@ -126,9 +201,6 @@ STATIC inline void S9xAPUPackStatus()
 }
 
 START_EXTERN_C
-void S9xResetAPU (void);
-bool8_32 S9xInitAPU ();
-void S9xDeinitAPU ();
 void S9xDecacheSamples ();
 int S9xTraceAPU ();
 int S9xAPUOPrint (char *buffer, uint16 Address);
@@ -139,8 +211,6 @@ void S9xSetAPUTimer (uint16 Address, uint8 byte);
 bool8_32 S9xInitSound (int quality, bool8_32 stereo, int buffer_size);
 void S9xOpenCloseSoundTracingFile (bool8_32);
 void S9xPrintAPUState ();
-extern int32 S9xAPUCycles [256];	// Scaled cycle lengths
-extern int32 S9xAPUCycleLengths [256];	// Raw data.
 extern void (*S9xApuOpcodes [256]) (struct SAPURegisters *, struct SIAPU *, struct SAPU *);
 END_EXTERN_C
 

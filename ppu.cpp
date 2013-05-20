@@ -43,7 +43,7 @@
 #include "ppu.h"
 #include "cpuexec.h"
 #include "missing.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "dma.h"
 #include "gfx.h"
 #include "display.h"

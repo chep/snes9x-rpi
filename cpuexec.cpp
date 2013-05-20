@@ -47,7 +47,7 @@
 #include "snapshot.h"
 #include "gfx.h"
 #include "missing.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "dma.h"
 #include "fxemu.h"
 #include "sa1.h"

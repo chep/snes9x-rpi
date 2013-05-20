@@ -47,7 +47,7 @@
 #include "memmap.h"
 #include "debug.h"
 #include "missing.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "sa1.h"
 
 START_EXTERN_C
@@ -69,7 +69,7 @@ END_EXTERN_C
 #include "cpuaddr.h"
 #include "cpuops.h"
 #include "cpumacro.h"
-#include "apu.h"
+#include "apu.hpp"
 
 /* ADC *************************************************************************************** */
 static void Op69M1 (struct SRegisters * reg, struct SICPU * icpu, struct SCPUState * cpu)

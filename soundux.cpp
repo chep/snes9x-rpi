@@ -108,7 +108,7 @@
 (v) = 127
 
 #include "snes9x.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "soundux.h"
 #include "memmap.h"
 #include "cpuexec.h"

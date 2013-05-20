@@ -45,7 +45,7 @@
 #include "cpuexec.h"
 #include "display.h"
 #include "gfx.h"
-#include "apu.h"
+#include "apu.hpp"
 #include "cheats.h"
 
 #define M7 19
