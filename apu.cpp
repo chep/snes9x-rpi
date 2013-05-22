@@ -152,7 +152,7 @@ void IAPU::reset()
 	std::fill(RAM.begin(), RAM.end(), RAMInitialValue);
 	std::fill(shadowRAM.begin(), shadowRAM.end(), RAMInitialValue);
 	std::fill(cachedSamples.begin(), cachedSamples.end(), 0);
-	std::copy(APUROM, APUROM + sizeof(APUROM), RAM.begin() + 0xffc0);
+	resetROM();
 	PC = RAM.begin() + RAM[0xfffe] + (RAM[0xffff] << 8);
 	directPage = RAM.begin();
 
@@ -165,7 +165,16 @@ void IAPU::reset()
 }
 
 
+void IAPU::resetROM()
+{
+	std::copy(APUROM, APUROM + sizeof(APUROM), RAM.begin() + 0xffc0);
+}
 
+
+void IAPU::fillRAM(unsigned offset, const std::vector<uint8>& src)
+{
+	std::copy(src.begin(), src.end(), RAM.begin() + offset);
+}
 
 /*******************************************************************************
  **************************************APU**************************************
@@ -349,7 +358,8 @@ void APU::setDSP (uint8 byte, IAPU& iapu)
 				    DSP[APU_KON] |= mask;
 				    DSP[APU_KOFF] &= ~mask;
 				    DSP[APU_ENDX] &= ~mask;
-				    S9xPlaySample (c, this);
+				    #warning à décommenter
+//				    S9xPlaySample (c, this);
 			    }
 		    }
 	    }
@@ -540,7 +550,77 @@ void APU::setDSP (uint8 byte, IAPU& iapu)
 }
 
 
+void APU::setControl (uint8 byte, IAPU& iapu)
+{
+	if ((byte & 1) != 0 && !timerEnabled[0])
+    {
+        timer[0] = 0;
+        iapu[0xfd] = 0;
+        timerTarget[0] = iapu[0xfa] ? iapu[0xfa]:0x100;
+    }
+    if ((byte & 2) != 0 && !timerEnabled[1])
+    {
+        timer[1] = 0;
+        iapu[0xfe] = 0;
+        timerTarget[1] = iapu[0xfb] ? iapu[0xfb]:0x100;
+    }
+    if ((byte & 4) != 0 && !timerEnabled[2])
+    {
+        timer[2] = 0;
+        iapu[0xff] = 0;
+        timerTarget[2] = iapu[0xfc] ? iapu[0xfc]:0x100;
+    }
+    timerEnabled[0] = byte & 1;
+    timerEnabled[1] = (byte & 2) >> 1;
+    timerEnabled[2] = (byte & 4) >> 2;
 
+    if (byte & 0x10)
+	    iapu[0xF4] = iapu[0xF5] = 0;
+
+    if (byte & 0x20)
+        iapu[0xF6] = iapu[0xF7] = 0;
+
+    if (byte & 0x80)
+    {
+        if (!showROM)
+        {
+	        iapu.resetROM();
+            showROM = true;
+        }
+    }
+    else
+    {
+        if (showROM)
+        {
+            showROM = false;
+            iapu.fillRAM(0xffc0, extraRAM);
+        }
+    }
+    iapu[0xf1] = byte;
+}
+
+
+
+void APU::setTimer(uint16 address, uint8 byte, IAPU& iapu)
+{
+    iapu[address] = byte;
+
+    switch (address)
+    {
+    case 0xfa:
+        timerTarget[0] = iapu[0xfa] ? iapu[0xfa]:0x100;
+	    timerValueWritten[0] = true;
+	    break;
+    case 0xfb:
+        timerTarget[1] = iapu[0xfb] ? iapu[0xfb]:0x100;
+	    timerValueWritten[1] = true;
+	    break;
+    case 0xfc:
+        timerTarget[2] = iapu[0xfc] ? iapu[0xfc]:0x100;
+	    timerValueWritten[2] = true;
+	    break;
+    }
+}
 
 /*******************************************************************************
  **********************************APUController********************************
@@ -672,124 +752,58 @@ void S9xFixEnvelope (int channel, uint8 gain, uint8 adsr1, uint8 adsr2)
     }
 }
 
-void S9xSetAPUControl (uint8 byte)
+void APUController::setAPUControl (uint8 byte)
 {
-//if (byte & 0x40)
-//printf ("*** Special SPC700 timing enabled\n");
-    if ((byte & 1) != 0 && !APU.TimerEnabled [0])
-    {
-	APU.Timer [0] = 0;
-	IAPU.RAM [0xfd] = 0;
-	if ((APU.TimerTarget [0] = IAPU.RAM [0xfa]) == 0)
-	    APU.TimerTarget [0] = 0x100;
-    }
-    if ((byte & 2) != 0 && !APU.TimerEnabled [1])
-    {
-	APU.Timer [1] = 0;
-	IAPU.RAM [0xfe] = 0;
-	if ((APU.TimerTarget [1] = IAPU.RAM [0xfb]) == 0)
-	    APU.TimerTarget [1] = 0x100;
-    }
-    if ((byte & 4) != 0 && !APU.TimerEnabled [2])
-    {
-	APU.Timer [2] = 0;
-	IAPU.RAM [0xff] = 0;
-	if ((APU.TimerTarget [2] = IAPU.RAM [0xfc]) == 0)
-	    APU.TimerTarget [2] = 0x100;
-    }
-    APU.TimerEnabled [0] = byte & 1;
-    APU.TimerEnabled [1] = (byte & 2) >> 1;
-    APU.TimerEnabled [2] = (byte & 4) >> 2;
-
-    if (byte & 0x10)
-	IAPU.RAM [0xF4] = IAPU.RAM [0xF5] = 0;
-
-    if (byte & 0x20)
-	IAPU.RAM [0xF6] = IAPU.RAM [0xF7] = 0;
-
-    if (byte & 0x80)
-    {
-	if (!APU.ShowROM)
-	{
-	    memmove (&IAPU.RAM [0xffc0], APUROM, sizeof (APUROM));
-	    APU.ShowROM = TRUE;
-	}
-    }
-    else
-    {
-	if (APU.ShowROM)
-	{
-	    APU.ShowROM = FALSE;
-	    memmove (&IAPU.RAM [0xffc0], APU.ExtraRAM, sizeof (APUROM));
-	}
-    }
-    IAPU.RAM [0xf1] = byte;
+	apu.setControl(byte, iapu);
 }
 
-void S9xSetAPUTimer (uint16 Address, uint8 byte)
-{
-    IAPU.RAM [Address] = byte;
 
-    switch (Address)
-    {
-    case 0xfa:
-	if ((APU.TimerTarget [0] = IAPU.RAM [0xfa]) == 0)
-	    APU.TimerTarget [0] = 0x100;
-	APU.TimerValueWritten [0] = TRUE;
-	break;
-    case 0xfb:
-	if ((APU.TimerTarget [1] = IAPU.RAM [0xfb]) == 0)
-	    APU.TimerTarget [1] = 0x100;
-	APU.TimerValueWritten [1] = TRUE;
-	break;
-    case 0xfc:
-	if ((APU.TimerTarget [2] = IAPU.RAM [0xfc]) == 0)
-	    APU.TimerTarget [2] = 0x100;
-	APU.TimerValueWritten [2] = TRUE;
-	break;
-    }
+void APUController::setAPUTimer (uint16 address, uint8 byte)
+{
+	apu.setTimer(address, byte, iapu);
 }
 
-uint8 S9xGetAPUDSP ()
+
+uint8 APUController::getAPUDSP ()
 {
-    uint8 reg = IAPU.RAM [0xf2] & 0x7f;
-    uint8 byte = APU.DSP [reg];
+	uint8 reg = iapu[0xf2] & 0x7f;
+	uint8 byte = apu.getDSP(reg);
 
-    switch (reg)
-    {
-    case APU_KON:
-	break;
-    case APU_KOFF:
-	break;
-    case APU_OUTX + 0x00:
-    case APU_OUTX + 0x10:
-    case APU_OUTX + 0x20:
-    case APU_OUTX + 0x30:
-    case APU_OUTX + 0x40:
-    case APU_OUTX + 0x50:
-    case APU_OUTX + 0x60:
-    case APU_OUTX + 0x70:
-	if (SoundData.channels [reg >> 4].state == SOUND_SILENT)
-	    return (0);
-	return ((SoundData.channels [reg >> 4].sample >> 8) |
-		(SoundData.channels [reg >> 4].sample & 0xff));
+	switch (reg)
+	{
+	case APU_KON:
+		break;
+	case APU_KOFF:
+		break;
+	case APU_OUTX + 0x00:
+	case APU_OUTX + 0x10:
+	case APU_OUTX + 0x20:
+	case APU_OUTX + 0x30:
+	case APU_OUTX + 0x40:
+	case APU_OUTX + 0x50:
+	case APU_OUTX + 0x60:
+	case APU_OUTX + 0x70:
+		if (SoundData.channels [reg >> 4].state == SOUND_SILENT)
+			return (0);
+		return ((SoundData.channels [reg >> 4].sample >> 8) |
+		        (SoundData.channels [reg >> 4].sample & 0xff));
 
-    case APU_ENVX + 0x00:
-    case APU_ENVX + 0x10:
-    case APU_ENVX + 0x20:
-    case APU_ENVX + 0x30:
-    case APU_ENVX + 0x40:
-    case APU_ENVX + 0x50:
-    case APU_ENVX + 0x60:
-    case APU_ENVX + 0x70:
-	return ((uint8) S9xGetEnvelopeHeight (reg >> 4));
+	case APU_ENVX + 0x00:
+	case APU_ENVX + 0x10:
+	case APU_ENVX + 0x20:
+	case APU_ENVX + 0x30:
+	case APU_ENVX + 0x40:
+	case APU_ENVX + 0x50:
+	case APU_ENVX + 0x60:
+	case APU_ENVX + 0x70:
+		return ((uint8) S9xGetEnvelopeHeight (reg >> 4));
 
-    case APU_ENDX:
+	case APU_ENDX:
 // To fix speech in Magical Drop 2 6/11/00
 //	APU.DSP [APU_ENDX] = 0;
-	break;
-    default:
-	break;
-    }
-    return (byte);
+		break;
+	default:
+		break;
+	}
+	return (byte);
 }

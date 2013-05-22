@@ -79,6 +79,8 @@ public:
 	void setOverflow(bool o) {overflow = o;}
 	void setAPUExecuting(bool e) {APUExecuting = e;}
 	int32 getOneCycle() const {return oneCycle;}
+	void resetROM();
+	void fillRAM(unsigned offset, const std::vector<uint8>& src);
 
 private:
     std::vector<uint8> RAM;
@@ -112,9 +114,14 @@ public:
 
 public:
 	void reset(); /**<Reset all attributes. */
-	uint8_32 getP() const {return registers.P;}
 	void setCycles(int32 iapuOneCycle);
 	void setDSP (uint8 byte, IAPU& iapu);
+	void setControl (uint8 byte, IAPU& iapu);
+	void setTimer(uint16 address, uint8 byte, IAPU& iapu);
+
+/* get and set */
+	uint8_32 getP() const {return registers.P;}
+	uint8 getDSP(unsigned index) const {return DSP[index];}
 
 private:
 	struct Registers
@@ -151,6 +158,9 @@ public:
 
 public:
 	void reset(); /**<Reset all attributes. */
+	void setAPUControl (uint8 byte);
+	void setAPUTimer (uint16 address, uint8 byte);
+	uint8 getAPUDSP ();
 
 private:
 	void unpackStatus();
@@ -201,16 +211,8 @@ STATIC inline void S9xAPUPackStatus()
 }
 
 START_EXTERN_C
-void S9xDecacheSamples ();
-int S9xTraceAPU ();
-int S9xAPUOPrint (char *buffer, uint16 Address);
-void S9xSetAPUControl (uint8 byte);
-void S9xSetAPUDSP (uint8 byte, struct SAPU *, struct SIAPU *);
-uint8 S9xGetAPUDSP ();
-void S9xSetAPUTimer (uint16 Address, uint8 byte);
 bool8_32 S9xInitSound (int quality, bool8_32 stereo, int buffer_size);
 void S9xOpenCloseSoundTracingFile (bool8_32);
-void S9xPrintAPUState ();
 extern void (*S9xApuOpcodes [256]) (struct SAPURegisters *, struct SIAPU *, struct SAPU *);
 END_EXTERN_C
 
