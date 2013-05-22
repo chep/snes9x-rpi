@@ -115,7 +115,6 @@ uint8 *HDMABasePointers [8];
 
 struct SBG BG;
 
-struct SGFX GFX;
 struct SLineData LineData[240];
 struct SLineMatrixData LineMatrixData [240];
 

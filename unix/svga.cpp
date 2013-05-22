@@ -62,9 +62,7 @@
 
 #define COUNT(a) (sizeof(a) / sizeof(a[0]))
 
-SDL_Surface *screen, *gfxscreen;
 
-uint16 *RGBconvert;
 extern uint32 xs, ys, cl, cs;
 
 #ifndef _ZAURUS
@@ -81,46 +79,6 @@ void S9xTextMode ()
 {
 }
 #endif
-
-void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
-{
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (Settings.NextAPUEnabled ? SDL_INIT_AUDIO : 0)) < 0 ) 
-	{
-		printf("Could not initialize SDL(%s)\n", SDL_GetError());
-		S9xExit();
-	}
-
-	atexit(SDL_Quit);
-	screen = SDL_SetVideoMode(xs, ys, 16, SDL_SWSURFACE);
-	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
-
-
-	if (screen == NULL)
-	{
-		printf("Couldn't set video mode: %s\n", SDL_GetError());
-		S9xExit();
-	}
-	if (Settings.SupportHiRes) {
-		gfxscreen = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 480, 16, 0, 0, 0, 0);
-		GFX.Screen = (uint8 *)gfxscreen->pixels;
-		GFX.Pitch = 512 * 2;
-	} else {
-		GFX.Screen = (uint8 *)screen->pixels + 64;
-		GFX.Pitch = 320 * 2;
-	}
-	GFX.SubScreen = (uint8 *)malloc(512 * 480 * 2);
-	GFX.ZBuffer = (uint8 *)malloc(512 * 480 * 2);
-	GFX.SubZBuffer = (uint8 *)malloc(512 * 480 * 2);
-
-	RGBconvert = (uint16 *)malloc(65536 * 2);
-	if (!RGBconvert)
-	{
-//		OutOfMemory();
-		S9xExit();
-	}
-	for (uint32 i = 0; i < 65536; i++) 
-		((uint16 *)(RGBconvert))[i] = ((i >> 11) << 10) | ((((i >> 5) & 63) >> 1) << 5) | (i & 31);
-}
 
 void S9xDeinitDisplay ()
 {

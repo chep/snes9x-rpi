@@ -41,10 +41,12 @@
 
 #include <vector>
 #include <string>
+#include <SDL/SDL.h>
 
 #include "exceptions.hpp"
 #include "memmap.h"
 #include "apu.hpp"
+#include "gfx.hpp"
 
 /* Forward declaration */
 class SoundSystem;
@@ -69,7 +71,7 @@ public:
 
 
 private:
-	/** Parse arguments given to emulator.
+	/** Parses arguments given to emulator.
 	    @param [in] arguments Command line arguments, without argv[0].
 	    @return Rom file.
 	*/
@@ -77,18 +79,21 @@ private:
 
 	/** Prints usage and throws an ExitException
 	 */
-	void printUsage () throw (ExitException);
+	void printUsage() throw (ExitException);
+
+	/** Initializes SDL surfaces */
+	void initDisplay();
 
 private:
 	SoundSystem *sndSys; /**< Alsa sound system. */
 	InputController *inputController;/**< keyboard and joystick management. */
-	CMemory Memory;
+	CMemory memory;
 	APUController apu;
 
 	/* Display */
 	SDL_Surface *screen;
 	SDL_Surface *gfxscreen;
-	struct SGFX GFX;
+	GFX gfx;
 
 	/* Settings: */
 	bool soundEnabled; /**< True if sound are enabled. */

@@ -60,70 +60,11 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
-#include "snes9x.h"
-#include "memmap.h"
-#include "debug.h"
-#include "cpuexec.h"
-#include "ppu.h"
-#include "snapshot.h"
-#include "apu.hpp"
-#include "display.h"
-#include "gfx.h"
-#include "soundux.h"
-#include "spc700.h"
-#include "joystick.hpp"
-
-// rPi port: added all this joystick stuff
-// If for some unfathomable reason your joystick has more than 32 buttons or 8 
-// axes, you should change these array definitions to reflect that. 
-// int8 joy_buttons[NB_MAX_CONTROLLERS][32];
-// uint8 joy_axes[NB_MAX_CONTROLLERS][8];
-
-// joystick_t *joy_buttons_maping = NULL;
-// unsigned nb_joy_mapping = 0;
-// uint8 *joy_button_numbers[NB_MAX_CONTROLLERS] = {0};
+#include "emulator.hpp"
 
 
-void InitTimer ();
-
-extern void S9xDisplayFrameRate (uint8 *, uint32);
-extern void S9xDisplayString (const char *string, uint8 *, uint32);
-extern SDL_Surface *screen;
-
-static uint32 ffc = 0;
-bool8_32 nso = FALSE, vga = FALSE;
- 
-
-char *rom_filename = NULL;
-char *snapshot_filename = NULL;
-
-static void signalHandler(int)
-{
-	std::cerr<<"Signal received. Exiting"<<std::endl;
-	S9xExit();
-}
 
 
-void OutOfMemory ()
-{
-    fprintf (stderr, "\
-Snes9X: Memory allocation failure - not enough RAM/virtual memory available.\n\
-        S9xExiting...\n");
-    Memory.Deinit ();
-    S9xDeinitAPU ();
-
-    if (inputController)
-	    delete inputController;
-
-    if (sndSys)
-	    delete sndSys;
-
-    exit (1);
-}
-
-
-/*#include "cheats.h"*/
-extern "C"
 int main (int argc, char **argv)
 {
 	std::vector<std::string> arguments;
@@ -144,24 +85,12 @@ int main (int argc, char **argv)
 	
 	if (emulator)
 		delete emulator;
+ 
 
+/* arreté ici */
 
+   uint32 saved_flags = CPU.Flags;
 
-
-
-   (void) S9xInitSound (Settings.SoundPlaybackRate, Settings.Stereo,
-			 Settings.SoundBufferSize);
-
-    if (!Settings.APUEnabled)
-	S9xSetSoundMute (TRUE);
-
-    uint32 saved_flags = CPU.Flags;
-
-#ifdef GFX_MULTI_FORMAT
-    S9xSetRenderPixelFormat (RGB565);
-#endif
-
-    S9xInitDisplay (argc, argv);
     if (!S9xGraphicsInit ())
 	    OutOfMemory ();
 
@@ -284,6 +213,67 @@ int main (int argc, char **argv)
     }
     return (0);
 }
+
+
+
+
+#include "snes9x.h"
+#include "memmap.h"
+#include "debug.h"
+#include "cpuexec.h"
+#include "ppu.h"
+#include "snapshot.h"
+#include "apu.hpp"
+#include "display.h"
+#include "gfx.h"
+#include "soundux.h"
+#include "spc700.h"
+#include "joystick.hpp"
+
+#include "emulator.hpp"
+#include "inputConfig.hpp"
+
+void InitTimer ();
+
+extern void S9xDisplayFrameRate (uint8 *, uint32);
+extern void S9xDisplayString (const char *string, uint8 *, uint32);
+extern SDL_Surface *screen;
+
+static uint32 ffc = 0;
+bool8_32 nso = FALSE, vga = FALSE;
+ 
+
+char *rom_filename = NULL;
+char *snapshot_filename = NULL;
+
+static void signalHandler(int)
+{
+	std::cerr<<"Signal received. Exiting"<<std::endl;
+	S9xExit();
+}
+
+
+void OutOfMemory ()
+{
+    fprintf (stderr, "\
+Snes9X: Memory allocation failure - not enough RAM/virtual memory available.\n\
+        S9xExiting...\n");
+    Memory.Deinit ();
+    S9xDeinitAPU ();
+
+    if (inputController)
+	    delete inputController;
+
+    if (sndSys)
+	    delete sndSys;
+
+    exit (1);
+}
+
+
+/*#include "cheats.h"*/
+extern "C"
+
 
 void S9xAutoSaveSRAM ()
 {

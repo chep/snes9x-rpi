@@ -34,6 +34,8 @@
 //
 // Snes9x homepage: http://www.snes9x.com
 //
+//
+//
 // Copyright Cédric Chépied 2013
 
 #include <iostream>
@@ -41,11 +43,13 @@
 
 #include "emulator.hpp"
 #include "snes9x.h"
+#include "soundSystem.hpp"
+#include "inputController.hpp"
 
 Emulator::Emulator(const std::vector<std::string> arguments):
 	sndSys(NULL),
 	inputController(NULL),
-	APUController(0),
+	apu(0),
 
 	soundEnabled(true),
 	soundSkipMethod(0),
@@ -92,7 +96,7 @@ Emulator::Emulator(const std::vector<std::string> arguments):
 {
 	std::string romFilename(parseArgs(arguments));
 
-	if (!Memory.Init ())
+	if (!memory.Init ())
 		throw SnesException("Out of memory");
 
 	S9xInitSound (soundPlaybackRate, true,
@@ -111,9 +115,9 @@ Emulator::~Emulator()
 	    delete inputController;
 
     S9xDeinitDisplay ();
-    Memory.SaveSRAM (S9xGetFilename (".srm"));
+    memory.SaveSRAM (S9xGetFilename (".srm"));
 
-	Memory.DeInit();
+	memory.Deinit();
 }
 
 
@@ -126,28 +130,27 @@ void Emulator::initDisplay ()
 		throw SnesException("Unable to init SDL");
 
 	atexit(SDL_Quit);
-	screen = SDL_SetVideoMode(xs, ys, 16, SDL_SWSURFACE);
+	screen = SDL_SetVideoMode(resolutionX, resolutionY, 16, SDL_SWSURFACE);
 	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
 
 
 	if (screen == NULL)
-		throw SnesException("Couldn't set video mode: " + SDL_GetError());
+		throw SnesException(std::string("Couldn't set video mode: ") + SDL_GetError());
 
 //Refaire GFX
 	if (supportHiRes)
 	{
 		gfxscreen = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 480, 16, 0, 0, 0, 0);
-		GFX.Screen = (uint8 *)gfxscreen->pixels;
-		GFX.Pitch = 512 * 2;
-	} else
-	{
-		GFX.Screen = (uint8 *)screen->pixels + 64;
-		GFX.Pitch = 320 * 2;
+		gfx.setScreen((boost::uint8_t *) gfxscreen->pixels);
+		gfx.setPitch(512 * 2);
 	}
-	GFX.SubScreen = (uint8 *)malloc(512 * 480 * 2);
-	GFX.ZBuffer = (uint8 *)malloc(512 * 480 * 2);
-	GFX.SubZBuffer = (uint8 *)malloc(512 * 480 * 2);
+	else
+	{
+		gfx.setScreen((uint8 *)screen->pixels + 64);
+		gfx.setPitch(320 * 2);
+	}
 }
+
 
 
 std::string Emulator::parseArgs(const std::vector<std::string> arguments)
