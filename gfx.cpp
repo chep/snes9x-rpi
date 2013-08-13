@@ -39,8 +39,27 @@
 #include "gfx.hpp"
 
 
+#warning à virer
+#include "port.h"
+#include "gfx.h"
+#include "ppu.h"
+#include "tile.h"
+extern uint32 odd_high[4][16];
+extern uint32 odd_low[4][16];
+extern uint32 even_high[4][16];
+extern uint32 even_low[4][16];
+extern struct SPPU PPU;
+extern struct InternalPPU IPPU;
+extern NormalTileRenderer DrawTilePtr;
+extern ClippedTileRenderer DrawClippedTilePtr;
+extern NormalTileRenderer DrawHiResTilePtr;
+extern ClippedTileRenderer DrawHiResClippedTilePtr;
+extern LargePixelRenderer DrawLargePixelPtr;
+
+
+
 GFX::GFX():
-	SubScreen(512 * 480 * 2),
+	subScreen(512 * 480 * 2),
 	zBuffer(512 * 480 * 2),
 	subZBuffer(512 * 480 * 2)
 {
@@ -50,7 +69,233 @@ GFX::GFX():
 
 
 
+void GFX::initGraphics (bool sixteenBit)
+{
+	register boost::uint32_t PixelOdd = 1;
+	register boost::uint32_t PixelEven = 2;
 
+	for (boost::uint8_t bitshift = 0; bitshift < 4; bitshift++)
+	{
+		for (register char i = 0; i < 16; i++)
+		{
+			register boost::uint32_t h = 0;
+			register boost::uint32_t l = 0;
+
+#if defined(LSB_FIRST)
+			if (i & 8)
+				h |= PixelOdd;
+			if (i & 4)
+				h |= PixelOdd << 8;
+			if (i & 2)
+				h |= PixelOdd << 16;
+			if (i & 1)
+				h |= PixelOdd << 24;
+			if (i & 8)
+				l |= PixelOdd;
+			if (i & 4)
+				l |= PixelOdd << 8;
+			if (i & 2)
+				l |= PixelOdd << 16;
+			if (i & 1)
+				l |= PixelOdd << 24;
+#else
+			if (i & 8)
+				h |= (PixelOdd << 24);
+			if (i & 4)
+				h |= (PixelOdd << 16);
+			if (i & 2)
+				h |= (PixelOdd << 8);
+			if (i & 1)
+				h |= PixelOdd;
+			if (i & 8)
+				l |= (PixelOdd << 24);
+			if (i & 4)
+				l |= (PixelOdd << 16);
+			if (i & 2)
+				l |= (PixelOdd << 8);
+			if (i & 1)
+				l |= PixelOdd;
+#endif
+
+			odd_high[bitshift][i] = h;
+			odd_low[bitshift][i] = l;
+			h = l = 0;
+
+#if defined(LSB_FIRST)
+			if (i & 8)
+				h |= PixelEven;
+			if (i & 4)
+				h |= PixelEven << 8;
+			if (i & 2)
+				h |= PixelEven << 16;
+			if (i & 1)
+				h |= PixelEven << 24;
+			if (i & 8)
+				l |= PixelEven;
+			if (i & 4)
+				l |= PixelEven << 8;
+			if (i & 2)
+				l |= PixelEven << 16;
+			if (i & 1)
+				l |= PixelEven << 24;
+#else
+			if (i & 8)
+				h |= (PixelEven << 24);
+			if (i & 4)
+				h |= (PixelEven << 16);
+			if (i & 2)
+				h |= (PixelEven << 8);
+			if (i & 1)
+				h |= PixelEven;
+			if (i & 8)
+				l |= (PixelEven << 24);
+			if (i & 4)
+				l |= (PixelEven << 16);
+			if (i & 2)
+				l |= (PixelEven << 8);
+			if (i & 1)
+				l |= PixelEven;
+#endif
+
+			even_high[bitshift][i] = h;
+			even_low[bitshift][i] = l;
+		}
+		PixelEven <<= 2;
+		PixelOdd <<= 2;
+	}
+
+	realPitch = pitch2 = pitch;
+	zPitch = pitch;
+	if (sixteenBit)
+		zPitch >>= 1;
+#warning il faudra savoir à quoi ça sert:
+//	delta = (subScreen - screen) >> 1;
+//	depthDelta = subZBuffer - zBuffer;
+
+	PPU.BG_Forced = 0;
+	IPPU.OBJChanged = TRUE;
+
+	IPPU.DirectColourMapsNeedRebuild = TRUE;
+	pixSize = 1;
+
+	DrawTilePtr = DrawTile16;
+	DrawClippedTilePtr = DrawClippedTile16;
+	DrawLargePixelPtr = DrawLargePixel16;
+	DrawHiResTilePtr= DrawTile16;
+	DrawHiResClippedTilePtr = DrawClippedTile16;
+	PPL = pitch >> 1;
+	PPLx2 = Pitch;
+	S9xFixColourBrightness ();
+
+	if (sixteenBit)
+	{
+		X2 = new uint16[0x10000];
+		ZERO_OR_X2 = new uint16[0x10000];
+		ZERO = new uint16[0x10000];
+		uint32 r, g, b;
+
+		// Build a lookup table that multiplies a packed RGB value by 2 with
+		// saturation.
+		for (r = 0; r <= MAX_RED; r++)
+		{
+			uint32 r2 = r << 1;
+			if (r2 > MAX_RED)
+				r2 = MAX_RED;
+			for (g = 0; g <= MAX_GREEN; g++)
+			{
+				uint32 g2 = g << 1;
+				if (g2 > MAX_GREEN)
+					g2 = MAX_GREEN;
+				for (b = 0; b <= MAX_BLUE; b++)
+				{
+					uint32 b2 = b << 1;
+					if (b2 > MAX_BLUE)
+						b2 = MAX_BLUE;
+					X2[BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
+					X2[BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
+				}
+			}
+		}
+		std::fill(ZERO, ZERO + 0x10000 * sizeof(*ZERO), 0);
+		std::fill(ZERO_OR_X2, ZERO_OR_X2 + 0x10000 * sizeof(*ZERO_OR_X2), 0);
+
+		// Build a lookup table that if the top bit of the color value is zero
+		// then the value is zero, otherwise multiply the value by 2. Used by
+		// the color subtraction code.
+		for (r = 0; r <= MAX_RED; r++)
+		{
+			uint32 r2 = r;
+			if ((r2 & 0x10) == 0)
+				r2 = 0;
+			else
+				r2 = (r2 << 1) & MAX_RED;
+
+			if (r2 == 0)
+				r2 = 1;
+			for (g = 0; g <= MAX_GREEN; g++)
+			{
+				uint32 g2 = g;
+				if ((g2 & GREEN_HI_BIT) == 0)
+					g2 = 0;
+				else
+					g2 = (g2 << 1) & MAX_GREEN;
+
+				if (g2 == 0)
+					g2 = 1;
+				for (b = 0; b <= MAX_BLUE; b++)
+				{
+					uint32 b2 = b;
+					if ((b2 & 0x10) == 0)
+						b2 = 0;
+					else
+						b2 = (b2 << 1) & MAX_BLUE;
+
+					if (b2 == 0)
+						b2 = 1;
+					ZERO_OR_X2[BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
+					ZERO_OR_X2[BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
+				}
+			}
+		}
+
+		// Build a lookup table that if the top bit of the color value is zero
+		// then the value is zero, otherwise its just the value.
+		for (r = 0; r <= MAX_RED; r++)
+		{
+			uint32 r2 = r;
+			if ((r2 & 0x10) == 0)
+				r2 = 0;
+			else
+				r2 &= ~0x10;
+
+			for (g = 0; g <= MAX_GREEN; g++)
+			{
+				uint32 g2 = g;
+				if ((g2 & GREEN_HI_BIT) == 0)
+					g2 = 0;
+				else
+					g2 &= ~GREEN_HI_BIT;
+				for (b = 0; b <= MAX_BLUE; b++)
+				{
+					uint32 b2 = b;
+					if ((b2 & 0x10) == 0)
+						b2 = 0;
+					else
+						b2 &= ~0x10;
+
+					ZERO[BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
+					ZERO[BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
+				}
+			}
+		}
+	}
+	else
+	{
+		X2 = NULL;
+		ZERO_OR_X2 = NULL;
+		ZERO = NULL;
+	}
+}
 
 
 
@@ -252,306 +497,7 @@ void DrawLargePixel16Sub1_2 (uint32 Tile, uint32 Offset,
 			     uint32 StartPixel, uint32 Pixels,
 			     uint32 StartLine, uint32 LineCount, struct SGFX * gfx);
 
-bool8_32 S9xGraphicsInit ()
-{
-    register uint32 PixelOdd = 1;
-    register uint32 PixelEven = 2;
 
-#ifdef GFX_MULTI_FORMAT
-    if (GFX.BuildPixel == NULL)
-	S9xSetRenderPixelFormat (RGB565);
-#endif
-
-    for (uint8 bitshift = 0; bitshift < 4; bitshift++)
-    {
-	for (register char i = 0; i < 16; i++)
-	{
-	    register uint32 h = 0;
-	    register uint32 l = 0;
-
-#if defined(LSB_FIRST)
-	    if (i & 8)
-		h |= PixelOdd;
-	    if (i & 4)
-		h |= PixelOdd << 8;
-	    if (i & 2)
-		h |= PixelOdd << 16;
-	    if (i & 1)
-		h |= PixelOdd << 24;
-	    if (i & 8)
-		l |= PixelOdd;
-	    if (i & 4)
-		l |= PixelOdd << 8;
-	    if (i & 2)
-		l |= PixelOdd << 16;
-	    if (i & 1)
-		l |= PixelOdd << 24;
-#else
-	    if (i & 8)
-		h |= (PixelOdd << 24);
-	    if (i & 4)
-		h |= (PixelOdd << 16);
-	    if (i & 2)
-		h |= (PixelOdd << 8);
-	    if (i & 1)
-		h |= PixelOdd;
-	    if (i & 8)
-		l |= (PixelOdd << 24);
-	    if (i & 4)
-		l |= (PixelOdd << 16);
-	    if (i & 2)
-		l |= (PixelOdd << 8);
-	    if (i & 1)
-		l |= PixelOdd;
-#endif
-
-	    odd_high[bitshift][i] = h;
-	    odd_low[bitshift][i] = l;
-	    h = l = 0;
-
-#if defined(LSB_FIRST)
-	    if (i & 8)
-		h |= PixelEven;
-	    if (i & 4)
-		h |= PixelEven << 8;
-	    if (i & 2)
-		h |= PixelEven << 16;
-	    if (i & 1)
-		h |= PixelEven << 24;
-	    if (i & 8)
-		l |= PixelEven;
-	    if (i & 4)
-		l |= PixelEven << 8;
-	    if (i & 2)
-		l |= PixelEven << 16;
-	    if (i & 1)
-		l |= PixelEven << 24;
-#else
-	    if (i & 8)
-		h |= (PixelEven << 24);
-	    if (i & 4)
-		h |= (PixelEven << 16);
-	    if (i & 2)
-		h |= (PixelEven << 8);
-	    if (i & 1)
-		h |= PixelEven;
-	    if (i & 8)
-		l |= (PixelEven << 24);
-	    if (i & 4)
-		l |= (PixelEven << 16);
-	    if (i & 2)
-		l |= (PixelEven << 8);
-	    if (i & 1)
-		l |= PixelEven;
-#endif
-
-	    even_high[bitshift][i] = h;
-	    even_low[bitshift][i] = l;
-	}
-	PixelEven <<= 2;
-	PixelOdd <<= 2;
-    }
-
-    GFX.RealPitch = GFX.Pitch2 = GFX.Pitch;
-    GFX.ZPitch = GFX.Pitch;
-    if (Settings.SixteenBit)
-	GFX.ZPitch >>= 1;
-    GFX.Delta = (GFX.SubScreen - GFX.Screen) >> 1;
-    GFX.DepthDelta = GFX.SubZBuffer - GFX.ZBuffer;
-    //GFX.InfoStringTimeout = 0;
-    //GFX.InfoString = NULL;
-
-    PPU.BG_Forced = 0;
-    IPPU.OBJChanged = TRUE;
-    if (Settings.Transparency)
-	Settings.SixteenBit = TRUE;
-
-    IPPU.DirectColourMapsNeedRebuild = TRUE;
-    GFX.PixSize = 1;
-#ifndef _ZAURUS
-    if (Settings.SixteenBit)
-    {
-#endif
-	DrawTilePtr = DrawTile16;
-	DrawClippedTilePtr = DrawClippedTile16;
-	DrawLargePixelPtr = DrawLargePixel16;
-	DrawHiResTilePtr= DrawTile16;
-	DrawHiResClippedTilePtr = DrawClippedTile16;
-	GFX.PPL = GFX.Pitch >> 1;
-	GFX.PPLx2 = GFX.Pitch;
-#ifndef _ZAURUS
-    }
-    else
-    {
-	DrawTilePtr = DrawTile;
-	DrawClippedTilePtr = DrawClippedTile;
-	DrawLargePixelPtr = DrawLargePixel;
-	DrawHiResTilePtr = DrawTile;
-	DrawHiResClippedTilePtr = DrawClippedTile;
-	GFX.PPL = GFX.Pitch;
-	GFX.PPLx2 = GFX.Pitch * 2;
-    }
-#endif
-    S9xFixColourBrightness ();
-
-    if (Settings.SixteenBit)
-    {
-	if (!(GFX.X2 = (uint16 *) malloc (sizeof (uint16) * 0x10000)))
-	    return (FALSE);
-
-	if (!(GFX.ZERO_OR_X2 = (uint16 *) malloc (sizeof (uint16) * 0x10000)) ||
-	    !(GFX.ZERO = (uint16 *) malloc (sizeof (uint16) * 0x10000)))
-	{
-	    if (GFX.ZERO_OR_X2)
-	    {
-		free ((char *) GFX.ZERO_OR_X2);
-		GFX.ZERO_OR_X2 = NULL;
-	    }
-	    if (GFX.X2)
-	    {
-		free ((char *) GFX.X2);
-		GFX.X2 = NULL;
-	    }
-	    return (FALSE);
-	}
-	uint32 r, g, b;
-
-	// Build a lookup table that multiplies a packed RGB value by 2 with
-	// saturation.
-	for (r = 0; r <= MAX_RED; r++)
-	{
-	    uint32 r2 = r << 1;
-	    if (r2 > MAX_RED)
-		r2 = MAX_RED;
-	    for (g = 0; g <= MAX_GREEN; g++)
-	    {
-		uint32 g2 = g << 1;
-		if (g2 > MAX_GREEN)
-		    g2 = MAX_GREEN;
-		for (b = 0; b <= MAX_BLUE; b++)
-		{
-		    uint32 b2 = b << 1;
-		    if (b2 > MAX_BLUE)
-			b2 = MAX_BLUE;
-		    GFX.X2 [BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
-		    GFX.X2 [BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
-		}
-	    }
-	}
-	ZeroMemory (GFX.ZERO, 0x10000 * sizeof (uint16));
-	ZeroMemory (GFX.ZERO_OR_X2, 0x10000 * sizeof (uint16));
-	// Build a lookup table that if the top bit of the color value is zero
-	// then the value is zero, otherwise multiply the value by 2. Used by
-	// the color subtraction code.
-
-#if defined(OLD_COLOUR_BLENDING)
-	for (r = 0; r <= MAX_RED; r++)
-	{
-	    uint32 r2 = r;
-	    if ((r2 & 0x10) == 0)
-		r2 = 0;
-	    else
-		r2 = (r2 << 1) & MAX_RED;
-
-	    for (g = 0; g <= MAX_GREEN; g++)
-	    {
-		uint32 g2 = g;
-		if ((g2 & GREEN_HI_BIT) == 0)
-		    g2 = 0;
-		else
-		    g2 = (g2 << 1) & MAX_GREEN;
-
-		for (b = 0; b <= MAX_BLUE; b++)
-		{
-		    uint32 b2 = b;
-		    if ((b2 & 0x10) == 0)
-			b2 = 0;
-		    else
-			b2 = (b2 << 1) & MAX_BLUE;
-
-		    GFX.ZERO_OR_X2 [BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
-		    GFX.ZERO_OR_X2 [BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
-		}
-	    }
-	}
-#else
-        for (r = 0; r <= MAX_RED; r++)
-        {
-            uint32 r2 = r;
-            if ((r2 & 0x10) == 0)
-                r2 = 0;
-            else
-                r2 = (r2 << 1) & MAX_RED;
-
-            if (r2 == 0)
-                r2 = 1;
-            for (g = 0; g <= MAX_GREEN; g++)
-            {
-                uint32 g2 = g;
-                if ((g2 & GREEN_HI_BIT) == 0)
-                    g2 = 0;
-                else
-                    g2 = (g2 << 1) & MAX_GREEN;
-
-                if (g2 == 0)
-                    g2 = 1;
-                for (b = 0; b <= MAX_BLUE; b++)
-                {
-                    uint32 b2 = b;
-                    if ((b2 & 0x10) == 0)
-                        b2 = 0;
-                    else
-                        b2 = (b2 << 1) & MAX_BLUE;
-
-                    if (b2 == 0)
-                        b2 = 1;
-                    GFX.ZERO_OR_X2 [BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
-                    GFX.ZERO_OR_X2 [BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
-                }
-            }
-        }
-#endif
-
-	// Build a lookup table that if the top bit of the color value is zero
-	// then the value is zero, otherwise its just the value.
-	for (r = 0; r <= MAX_RED; r++)
-	{
-	    uint32 r2 = r;
-	    if ((r2 & 0x10) == 0)
-		r2 = 0;
-	    else
-		r2 &= ~0x10;
-
-	    for (g = 0; g <= MAX_GREEN; g++)
-	    {
-		uint32 g2 = g;
-		if ((g2 & GREEN_HI_BIT) == 0)
-		    g2 = 0;
-		else
-		    g2 &= ~GREEN_HI_BIT;
-		for (b = 0; b <= MAX_BLUE; b++)
-		{
-		    uint32 b2 = b;
-		    if ((b2 & 0x10) == 0)
-			b2 = 0;
-		    else
-			b2 &= ~0x10;
-
-		    GFX.ZERO [BUILD_PIXEL2 (r, g, b)] = BUILD_PIXEL2 (r2, g2, b2);
-		    GFX.ZERO [BUILD_PIXEL2 (r, g, b) & ~ALPHA_BITS_MASK] = BUILD_PIXEL2 (r2, g2, b2);
-		}
-	    }
-	}
-    }
-    else
-    {
-	GFX.X2 = NULL;
-	GFX.ZERO_OR_X2 = NULL;
-	GFX.ZERO = NULL;
-    }
-
-    return (TRUE);
-}
 
 void S9xGraphicsDeinit (void)
 {

@@ -84,6 +84,17 @@ private:
 	/** Initializes SDL surfaces */
 	void initDisplay();
 
+	/** Clean all memory. This is the real destructor.
+	    It is in a separated function because we need to clean memory if an exception
+	    occurs in constructor.
+	*/
+	void cleanMemory();
+
+	/** Returns the snapshot directory and creates it if needed
+	    @return snapshot directory.
+	*/
+	std::string getSnapshotDirectory();
+
 private:
 	SoundSystem *sndSys; /**< Alsa sound system. */
 	InputController *inputController;/**< keyboard and joystick management. */
@@ -139,8 +150,6 @@ private:
 	unsigned cl; /**< Don't know. Default is 0. */
 	unsigned cs; /**< Don't know. Default is 0. */
 	unsigned mfs; /**< Don't know. Default is 10. */
-
-
 };
 
 #endif

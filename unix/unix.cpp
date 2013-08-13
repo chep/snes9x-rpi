@@ -82,53 +82,18 @@ int main (int argc, char **argv)
 	{
 		std::cerr<<"Exception occurs: "<<e<<std::endl;
 	}
-	
+
 	if (emulator)
 		delete emulator;
- 
 
 /* arreté ici */
 
    uint32 saved_flags = CPU.Flags;
 
-    if (!S9xGraphicsInit ())
-	    OutOfMemory ();
-
-    try
-    {
-	    inputController = new InputController();
-    }
-    catch (SnesBadConfigFileException e)
-    {
-	    try
-	    {
-		    InputConfig tmp(true); //Create new config file
-		    tmp.save(std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE);
-		    inputController = new InputController();
-	    }
-	    catch (...)
-	    {
-		    std::cerr<<"Unable to create a default configuration file."<<std::endl;
-		    std::cerr<<"Check permissions of ";
-		    std::cerr<<std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE<<std::endl;
-		    S9xExit();
-	    }
-    }
-    catch(...)
-    {
-	    S9xExit();
-    }
-
-    if (!inputController)
-	    OutOfMemory ();
-
     /* SIGTERM management*/
     signal(SIGTERM, signalHandler);
     signal(SIGINT, signalHandler);
 
-#ifndef _ZAURUS
-    S9xTextMode ();
-#endif
     if (rom_filename)
     {
 	if (!Memory.LoadROM (rom_filename))
@@ -298,31 +263,6 @@ void S9xExit ()
     exit (0);
 }
 
-const char *GetHomeDirectory ()
-{
-    return (getenv ("HOME"));
-}
-
-const char *S9xGetSnapshotDirectory ()
-{
-    static char filename [PATH_MAX];
-    const char *snapshot;
-    
-    if (!(snapshot = getenv ("SNES9X_SNAPSHOT_DIR")) &&
-	!(snapshot = getenv ("SNES96_SNAPSHOT_DIR")))
-    {
-	const char *home = GetHomeDirectory ();
-	strcpy (filename, home);
-	strcat (filename, SLASH_STR);
-	strcat (filename, ".snes96_snapshots");
-	mkdir (filename, 0777);
-	chown (filename, getuid (), getgid ());
-    }
-    else
-	return (snapshot);
-
-    return (filename);
-}
 
 const char *S9xGetFilename (const char *ex)
 {

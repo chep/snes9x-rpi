@@ -99,14 +99,54 @@ Emulator::Emulator(const std::vector<std::string> arguments):
 	if (!memory.Init ())
 		throw SnesException("Out of memory");
 
-	S9xInitSound (soundPlaybackRate, true,
-	              8192);
+	try
+	{
+		S9xInitSound(soundPlaybackRate, true,
+		              8192);
+		initDisplay();
+		gfx.initGraphics();
 
-	initDisplay();
+		try
+		{
+			inputController = new InputController();
+		}
+		catch (SnesBadConfigFileException e)
+		{
+			try
+			{
+				InputConfig tmp(true); //Create new config file
+				tmp.save(getSnapshotDirectory() + "/" + INPUT_CONFIG_DEFAULT_FILE);
+				inputController = new InputController();
+			}
+			catch (...)
+			{
+				std::cerr<<"Unable to create a default configuration file."<<std::endl;
+				std::cerr<<"Check permissions of ";
+				std::cerr<<getSnapshotDirectory() + "/" + INPUT_CONFIG_DEFAULT_FILE<<std::endl;
+				throw SnesException("Unable to create a default configuration file.");
+			}
+		}
+	}
+	catch(SnesException e)
+	{
+		cleanMemory();
+		throw e;
+	}
+	catch(...)
+	{
+		cleanMemory();
+		throw SnesException("Unknown exception in Emulator constructor");
+	}
 }
 
 
 Emulator::~Emulator()
+{
+	cleanMemory();
+}
+
+
+void Emulator::cleanMemory()
 {
     if (sndSys)
 	    delete sndSys;
@@ -119,7 +159,6 @@ Emulator::~Emulator()
 
 	memory.Deinit();
 }
-
 
 
 void Emulator::initDisplay ()
@@ -137,7 +176,6 @@ void Emulator::initDisplay ()
 	if (screen == NULL)
 		throw SnesException(std::string("Couldn't set video mode: ") + SDL_GetError());
 
-//Refaire GFX
 	if (supportHiRes)
 	{
 		gfxscreen = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 480, 16, 0, 0, 0, 0);
@@ -359,7 +397,7 @@ std::string Emulator::parseArgs(const std::vector<std::string> arguments)
 				altSampleDecode = 1;
 			else if (*arg == "-fix")
 				fixFrequency = true;
-			
+
 			else if (*arg == "-l" ||
 			         *arg == "-loadsnapshot")
 			{
@@ -444,4 +482,13 @@ void Emulator::printUsage () throw(ExitException)
 {
 	std::cerr<<"Usage: snes9x <options> <rom image filename>"<<std::endl;
 	throw ExitException();
+}
+
+std::string Emulator::getSnapshotDirectory()
+{
+	std::string filename(std::string(getenv("HOME")) + "/.snes96_snapshots");
+	mkdir (filename.c_str(), 0777);
+	chown (filename.c_str(), getuid (), getgid ());
+
+	return filename;
 }

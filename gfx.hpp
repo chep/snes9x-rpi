@@ -50,6 +50,9 @@ public:
 	virtual ~GFX();
 
 public:
+	void initGraphics (bool sixteenBit);
+
+	/* Get and set */
 	void setScreen (boost::uint8_t *s) {screen = s;}
 	void setPitch(boost::uint32_t p) {pitch = p;}
 
@@ -61,39 +64,39 @@ private:
 	boost::uint32_t pitch;
 
 	// Setup in call to S9xGraphicsInit()
-	int   Delta;
+	int   delta;
 	boost::uint16_t *X2;
 	boost::uint16_t *ZERO_OR_X2;
 	boost::uint16_t *ZERO;
-	boost::uint32_t RealPitch; // True pitch of Screen buffer.
-	boost::uint32_t Pitch2;    // Same as RealPitch except while using speed up hack for Glide.
-	boost::uint32_t ZPitch;    // Pitch of ZBuffer
-	boost::uint32_t PPL;	      // Number of pixels on each of Screen buffer
+	boost::uint32_t realPitch; /**< True pitch of Screen buffer.*/
+	boost::uint32_t pitch2;    /**< Same as RealPitch except while using speed up hack for Glide.*/
+	boost::uint32_t zPitch;    /**< Pitch of ZBuffer */
+	boost::uint32_t PPL;       /**< Number of pixels on each of Screen buffer */
 	boost::uint32_t PPLx2;
-	boost::uint32_t PixSize;
+	boost::uint32_t pixSize;
 	boost::uint8_t  *S;
 	boost::uint8_t  *DB;
-	boost::uint16_t *ScreenColors;
-	boost::uint32_t DepthDelta;
-	boost::uint32_t Z1;
-	boost::uint32_t Z2;
-	boost::uint32_t FixedColour;
-	const char *InfoString;
-	boost::uint32_t InfoStringTimeout;
-	boost::uint32_t StartY;
-	boost::uint32_t EndY;
+	boost::uint16_t *screenColors;
+	boost::uint32_t depthDelta;
+	boost::uint32_t z1;
+	boost::uint32_t z2;
+	boost::uint32_t fixedColour;
+	const char *infoString;
+	boost::uint32_t infoStringTimeout;
+	boost::uint32_t startY;
+	boost::uint32_t endY;
 	struct ClipData *pCurrentClip;
-	boost::uint32_t Mode7Mask;
-	boost::uint32_t Mode7PriorityMask;
+	boost::uint32_t mode7Mask;
+	boost::uint32_t mode7PriorityMask;
 	int	   OBJList[129];
-	boost::uint32_t Sizes[129];
-	int    VPositions[129];
+	boost::uint32_t sizes[129];
+	int    vPositions[129];
 
 	boost::uint8_t	r212c;
 	boost::uint8_t	r212d;
 	boost::uint8_t	r2130;
 	boost::uint8_t	r2131;
-	bool Pseudo;
+	bool pseudo;
 };
 
 #endif
