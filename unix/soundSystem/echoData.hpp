@@ -36,33 +36,57 @@
 //
 // Copyright Cédric Chépied 2013
 
-#ifndef _SOUNDSYSTEM_HPP_
-#define _SOUNDSYSTEM_HPP_
-#include <alsa/asoundlib.h>
-#include <boost/thread.hpp>
+
+#ifndef _ECHODATA_HPP_
+#define _ECHODATA_HPP_
+
 #include <boost/cstdint.hpp>
 
 #include "exceptions.hpp"
 
-class SoundSystem
+#define ECHO_LOOP_SIZE 16
+
+class EchoData
 {
 public:
-	SoundSystem(unsigned int mode = 7,
-	            std::string device = "default") throw (SnesException);
-	~SoundSystem(void);
-
+	EchoData(unsigned bufferSize) throw (SnesException);
+	~EchoData();
 
 public:
-	void processSound(void);
+	bool isEchoEnabled() const {return enable && echoBufferSize > 0;}
+	void setEnable(boost::uint8_t byte);
+
+	void mixSamples(boost::int16_t *audioBuffer,
+	                boost::int16_t *mixBuffer,
+	                unsigned audioBufferSize,
+	                int masterVolume[2]);
+	void reset();
+
+	boost::int16_t* getBuffer() {return buffer;}
+	boost::int16_t* getDummyBuffer() {return dummyBuffer;}
 
 
 private:
-	snd_pcm_t *playback_handle;
-	boost::int16_t *audioBuffer;
-	unsigned bufferSize;
-	
-	boost::thread *threadProcess;
-	bool terminated;
+	void resetBuffer() {std::fill(buffer, buffer + bufferSize, 0);}
+
+private:
+	boost::int16_t *echo;
+	boost::int16_t *buffer;
+	boost::int16_t *dummyBuffer;
+	int loop [ECHO_LOOP_SIZE];
+    short volumeLeft;
+    short volumeRight;
+    bool enable;
+    int feedback;
+    unsigned ptr;
+    unsigned bufferSize;
+    unsigned echoBufferSize;
+    bool writeEnabled;
+    int channelEnable;
+	bool noFilter;
+	int volume[2];
+	int filterTaps [8];
+	unsigned long Z;
 };
 
 #endif

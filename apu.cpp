@@ -46,11 +46,13 @@
 #include "snes9x.h"
 #include "spc700.h"
 #include "apu.h"
-#include "soundux.h"
 /*#include "cpuexec.h"*/
 #include "port.h"
+#include "soundSystem.hpp"
 
 extern int NoiseFreq [32];
+extern SoundSystem *sndSys;
+
 #ifdef DEBUGGER
 void S9xTraceSoundDSP (const char *s, int i1 = 0, int i2 = 0, int i3 = 0,
 		       int i4 = 0, int i5 = 0, int i6 = 0, int i7 = 0);
@@ -144,8 +146,8 @@ void S9xResetAPU ()
     APU.DSP [APU_FLG] = APU_MUTE | APU_ECHO_DISABLED;
     APU.KeyedChannels = 0;
 
-    S9xResetSound (TRUE);
-    S9xSetEchoEnable (0);
+    sndSys->reset(true);
+    sndSys->setEchoEnable(0);
 }
 
 void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
@@ -366,7 +368,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		    apu->DSP [APU_KON] |= mask;
 		    apu->DSP [APU_KOFF] &= ~mask;
 		    apu->DSP [APU_ENDX] &= ~mask;
-		    S9xPlaySample (c, apu);
+		    sndSys->playSample (c, apu);
 		}
 	    }
 #ifdef DEBUGGER
@@ -485,7 +487,6 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] %d sample number: %d\n",
 				  ICPU.Scanline, reg>>4, byte);
 #endif
-	    S9xSetSoundSample (reg >> 4, byte);
 	}
 	break;
 	
@@ -674,96 +675,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 	apu->DSP [reg] = byte;
 }
 
-void S9xFixEnvelope (int channel, uint8 gain, uint8 adsr1, uint8 adsr2)
-{
-    if (adsr1 & 0x80)
-    {
-	// ADSR mode
-	static unsigned long AttackRate [16] = {
-	    4100, 2600, 1500, 1000, 640, 380, 260, 160,
-	    96, 64, 40, 24, 16, 10, 6, 1
-	};
-	static unsigned long DecayRate [8] = {
-	    1200, 740, 440, 290, 180, 110, 74, 37
-	};
-	static unsigned long SustainRate [32] = {
-	    ~0, 38000, 28000, 24000, 19000, 14000, 12000, 9400,
-	    7100, 5900, 4700, 3500, 2900, 2400, 1800, 1500,
-	    1200, 880, 740, 590, 440, 370, 290, 220,
-	    180, 150, 110, 92, 74, 55, 37, 18
-	};
-	// XXX: can DSP be switched to ADSR mode directly from GAIN/INCREASE/
-	// DECREASE mode? And if so, what stage of the sequence does it start
-	// at?
-	if (S9xSetSoundMode (channel, MODE_ADSR))
-	{
-	    // Hack for ROMs that use a very short attack rate, key on a 
-	    // channel, then switch to decay mode. e.g. Final Fantasy II.
 
-	    int attack = AttackRate [adsr1 & 0xf];
-
-	    if (attack == 1 && (!Settings.SoundSync
-#ifdef __WIN32__
-                || Settings.SoundDriver != WIN_SNES9X_DIRECT_SOUND_DRIVER
-#endif
-                ))
-		attack = 0;
-
-	    S9xSetSoundADSR (channel, attack,
-			     DecayRate [(adsr1 >> 4) & 7],
-			     SustainRate [adsr2 & 0x1f],
-			     (adsr2 >> 5) & 7, 8);
-	}
-    }
-    else
-    {
-	// Gain mode
-	if ((gain & 0x80) == 0)
-	{
-	    if (S9xSetSoundMode (channel, MODE_GAIN))
-	    {
-		S9xSetEnvelopeRate (channel, 0, 0, gain & 0x7f);
-		S9xSetEnvelopeHeight (channel, gain & 0x7f);
-	    }
-	}
-	else
-	{
-	    static unsigned long IncreaseRate [32] = {
-		~0, 4100, 3100, 2600, 2000, 1500, 1300, 1000,
-		770, 640, 510, 380, 320, 260, 190, 160,
-		130, 96, 80, 64, 48, 40, 32, 24,
-		20, 16, 12, 10, 8, 6, 4, 2
-	    };
-	    static unsigned long DecreaseRateExp [32] = {
-		~0, 38000, 28000, 24000, 19000, 14000, 12000, 9400,
-		7100, 5900, 4700, 3500, 2900, 2400, 1800, 1500,
-		1200, 880, 740, 590, 440, 370, 290, 220,
-		180, 150, 110, 92, 74, 55, 37, 18
-	    };
-	    if (gain & 0x40)
-	    {
-		// Increase mode
-		if (S9xSetSoundMode (channel, (gain & 0x20) ?
-					  MODE_INCREASE_BENT_LINE :
-					  MODE_INCREASE_LINEAR))
-		{
-		    S9xSetEnvelopeRate (channel, IncreaseRate [gain & 0x1f],
-					1, 127);
-		}
-	    }
-	    else
-	    {
-		uint32 rate = (gain & 0x20) ? DecreaseRateExp [gain & 0x1f] / 2 :
-					      IncreaseRate [gain & 0x1f];
-		int mode = (gain & 0x20) ? MODE_DECREASE_EXPONENTIAL
-					 : MODE_DECREASE_LINEAR;
-
-		if (S9xSetSoundMode (channel, mode))
-		    S9xSetEnvelopeRate (channel, rate, -1, 0);
-	    }
-	}
-    }
-}
 
 void S9xSetAPUControl (uint8 byte)
 {

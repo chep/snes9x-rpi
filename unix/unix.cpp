@@ -69,7 +69,6 @@
 #include "apu.h"
 #include "display.h"
 #include "gfx.h"
-#include "soundux.h"
 #include "spc700.h"
 #include "joystick.hpp"
 #include "soundSystem.hpp"
@@ -248,8 +247,8 @@ int main (int argc, char **argv)
    (void) S9xInitSound (Settings.SoundPlaybackRate, Settings.Stereo,
 			 Settings.SoundBufferSize);
 
-    if (!Settings.APUEnabled)
-	S9xSetSoundMute (TRUE);
+   if (!Settings.APUEnabled)
+	   sndSys->setMute(true);
 
     uint32 saved_flags = CPU.Flags;
 
@@ -366,10 +365,10 @@ int main (int argc, char **argv)
     	Settings.DisableSoundEcho = TRUE;
     	Settings.DisableMasterVolume = TRUE;
 		Settings.Stereo = FALSE;
-    	S9xSetSoundMute (TRUE);
+    	sndSys->setMute(true);
 	} else {
 	    if (!Settings.APUEnabled)
-			S9xSetSoundMute (FALSE);
+			sndSys->setMute(false);
 		else
 	    	InitTimer ();
 	}
@@ -388,7 +387,7 @@ void S9xAutoSaveSRAM ()
 
 void S9xExit ()
 {
-    S9xSetSoundMute (TRUE);
+    sndSys->setMute(true);
     if (sndSys)
 	    delete sndSys;
 
@@ -482,9 +481,9 @@ const char *S9xChooseFilename (bool8 read_only)
 	    read_only ? "Select load" : "Choose save");
     const char *filename;
 
-    S9xSetSoundMute (TRUE);
+    sndSys->setMute(true);
     filename = S9xSelectFilename (def, S9xGetSnapshotDirectory (), "s96", title);
-    S9xSetSoundMute (FALSE);
+    sndSys->setMute(false);
     return (filename);
 }
 #endif
@@ -706,17 +705,6 @@ void _splitpath (const char *path, char *drive, char *dir, char *fname,
     }
 }
 
-#ifndef _ZAURUS
-void S9xToggleSoundChannel (int c)
-{
-    if (c == 8)
-	so.sound_switch = 255;
-    else
-	so.sound_switch ^= 1 << c;
-    S9xSetSoundControl (so.sound_switch);
-}
-#endif
-
 static void SoundTrigger ()
 {
 }
@@ -913,10 +901,6 @@ void S9xUnixProcessSound (void)
 }
 
 static uint8 Buf[MAX_BUFFER_SIZE] __attribute__((aligned(4)));
-
-#define FIXED_POINT 0x10000
-#define FIXED_POINT_SHIFT 16
-#define FIXED_POINT_REMAINDER 0xffff
 
 static volatile bool8 block_signal = FALSE;
 static volatile bool8 block_generate_sound = FALSE;

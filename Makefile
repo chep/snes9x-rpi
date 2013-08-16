@@ -1,10 +1,10 @@
 
 CXX = g++
 
-INCLDIRS=-Iunix -Iunix/input -Iunzip -I.
+INCLDIRS=-Iunix -Iunix/input -Iunzip -Iunix/soundSystem -I.
 LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
 
-OPTIMISE= -D_ZAURUS -O3 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
+OPTIMISE= -D_ZAURUS -g -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
 UNZIPDEFINES=-DUNZIP_SUPPORT
 SOUNDDEFINES=-DSPC700_C
@@ -26,6 +26,7 @@ LDFLAGS=-lboost_serialization -lSDL -lstdc++ -lz -lSDL_ttf -lboost_thread -lasou
 SNES9X_SRC = $(wildcard *.cpp)
 SNES9X_SRC += $(wildcard unix/*.cpp)
 SNES9X_SRC += $(wildcard unix/input/*.cpp)
+SNES9X_SRC += $(wildcard unix/soundSystem/*.cpp)
 SNES9X_SRC += $(wildcard unzip/*.cpp)
 SNES9X_OBJ = $(SNES9X_SRC:.cpp=.o)
 

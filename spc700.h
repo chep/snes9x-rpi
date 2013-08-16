@@ -41,6 +41,8 @@
 #ifndef _SPC700_H_
 #define _SPC700_H_
 
+#include <boost/cstdint.hpp>
+
 #ifdef SPCTOOL
 #define NO_CHANNEL_STRUCT
 //#include "spctool/dsp.h"
@@ -87,19 +89,19 @@
 typedef union
 {
 #ifdef LSB_FIRST
-    struct { uint8 A, Y; } B;
+    struct { boost::uint8_t A, Y; } B;
 #else
-    struct { uint8 Y, A; } B;
+    struct { boost::uint8_t Y, A; } B;
 #endif
-    uint16 W;
+    boost::uint16_t W;
 } YAndA;
 
 struct SAPURegisters{
-    uint16_32	PC;
-    uint8_32	P;
+    boost::uint16_t	PC;
+    boost::uint8_t	P;
     YAndA		YA;
-    uint8_32	X;
-    uint8_32	S;
+    boost::uint8_t	X;
+    boost::uint8_t	S;
 };
 
 /*
@@ -112,7 +114,7 @@ struct SAPURegisters{
 };
 */
 
-EXTERN_C struct SAPURegisters APURegisters;
+extern "C" struct SAPURegisters APURegisters;
 
 // Needed by ILLUSION OF GAIA
 //#define ONE_APU_CYCLE 14
