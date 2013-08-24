@@ -153,7 +153,6 @@ void S9xResetAPU ()
 void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 {
     uint8 reg = iapu->RAM [0xf2];
-    int i;
 
     switch (reg)
     {
@@ -164,34 +163,29 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 	    apu->DSP [APU_ENDX] = 0;
 	    apu->DSP [APU_KOFF] = 0;
 	    apu->DSP [APU_KON] = 0;
-	    S9xSetEchoWriteEnable (FALSE);
+	    sndSys->setEchoWriteEnable(false);
 #ifdef DEBUGGER
 	    if (Settings.TraceSoundDSP)
 		S9xTraceSoundDSP ("[%d] DSP reset\n", ICPU.Scanline);
 #endif
 	    // Kill sound
-	    S9xResetSound (FALSE);
+	    sndSys->reset(false);
 	}
 	else
 	{
-	    S9xSetEchoWriteEnable (!(byte & APU_ECHO_DISABLED));
+	    sndSys->setEchoWriteEnable(!(byte & APU_ECHO_DISABLED));
 	    if (byte & APU_MUTE)
 	    {
 #ifdef DEBUGGER
-		if (Settings.TraceSoundDSP)
-		    S9xTraceSoundDSP ("[%d] Mute sound\n", ICPU.Scanline);
+		    if (Settings.TraceSoundDSP)
+			    S9xTraceSoundDSP ("[%d] Mute sound\n", ICPU.Scanline);
 #endif
-		S9xSetSoundMute (TRUE);
+		    sndSys->setMute(true);
 	    }
 	    else
-		S9xSetSoundMute (FALSE);
+		    sndSys->setMute(false);
 
-	    SoundData.noise_hertz = NoiseFreq [byte & 0x1f];
-	    for (i = 0; i < 8; i++)
-	    {
-		if (SoundData.channels [i].type == SOUND_NOISE)
-		    S9xSetSoundFrequency (i, SoundData.noise_hertz);
-	    }
+	    sndSys->setAllChannelsNoiseFreq(NoiseFreq [byte & 0x1f]);
 	}
 	break;
     case APU_NON:
@@ -204,7 +198,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 	    uint8 mask = 1;
 	    for (int c = 0; c < 8; c++, mask <<= 1)
 	    {
-		int type;
+		SoundType type;
 		if (byte & mask)
 		{
 		    type = SOUND_NOISE;
@@ -229,8 +223,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		    }
 #endif
 		}
-//		S9xSetSoundType (c, type);
-    	SoundData.channels[c].type = type;
+		sndSys->setChannelType(c, type);
 	    }
 #ifdef DEBUGGER
 	    if (Settings.TraceSoundDSP)
@@ -246,12 +239,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] Master volume left:%d\n", 
 				  ICPU.Scanline, (signed char) byte);
 #endif
-//		S9xSetMasterVolume ((signed char) byte,
-//				    (signed char) apu->DSP [APU_MVOL_RIGHT]);
-		SoundData.master_volume_left = (signed char) byte;
-		SoundData.master_volume_right = (signed char) apu->DSP [APU_MVOL_RIGHT];
-		SoundData.master_volume [Settings.ReverseStereo] = (signed char) byte;
-		SoundData.master_volume [1 ^ Settings.ReverseStereo] = (signed char) apu->DSP [APU_MVOL_RIGHT];
+	    sndSys->setVolume(byte, apu->DSP[APU_MVOL_RIGHT]);
 	}
 	break;
     case APU_MVOL_RIGHT:
@@ -262,12 +250,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] Master volume right:%d\n",
 				  ICPU.Scanline, (signed char) byte);
 #endif
-//		S9xSetMasterVolume ((signed char) apu->DSP [APU_MVOL_LEFT],
-//				    (signed char) byte);
-		SoundData.master_volume_left = (signed char) apu->DSP [APU_MVOL_LEFT];
-		SoundData.master_volume_right = (signed char) (signed char) byte;
-		SoundData.master_volume [Settings.ReverseStereo] = (signed char) apu->DSP [APU_MVOL_LEFT];
-		SoundData.master_volume [1 ^ Settings.ReverseStereo] = (signed char) byte;
+	    sndSys->setVolume(apu->DSP[APU_MVOL_LEFT], byte);
 	}
 	break;
     case APU_EVOL_LEFT:
@@ -278,12 +261,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] Echo volume left:%d\n",
 				  ICPU.Scanline, (signed char) byte);
 #endif
-//		S9xSetEchoVolume ((signed char) byte,
-//				  (signed char) apu->DSP [APU_EVOL_RIGHT]);
-	    SoundData.echo_volume_left = (signed char) byte;
-	    SoundData.echo_volume_right = (signed char) apu->DSP [APU_EVOL_RIGHT];
-	    SoundData.echo_volume [Settings.ReverseStereo] = (signed char) byte;
-	    SoundData.echo_volume [1 ^ Settings.ReverseStereo] = (signed char) apu->DSP [APU_EVOL_RIGHT];
+	    sndSys->setEchoVolume(byte, apu->DSP[APU_EVOL_RIGHT]);
 	}
 	break;
     case APU_EVOL_RIGHT:
@@ -294,12 +272,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] Echo volume right:%d\n",
 				  ICPU.Scanline, (signed char) byte);
 #endif
-//		S9xSetEchoVolume ((signed char) apu->DSP [APU_EVOL_LEFT],
-//				  (signed char) byte);
-	    SoundData.echo_volume_left = (signed char) apu->DSP [APU_EVOL_LEFT];
-	    SoundData.echo_volume_right = (signed char) byte;
-	    SoundData.echo_volume [Settings.ReverseStereo] = (signed char) apu->DSP [APU_EVOL_LEFT];
-	    SoundData.echo_volume [1 ^ Settings.ReverseStereo] = (signed char) byte;
+	    sndSys->setEchoVolume(apu->DSP[APU_EVOL_LEFT], byte);
 	}
 	break;
     case APU_ENDX:
@@ -333,7 +306,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 			    apu->KeyedChannels &= ~mask;
 			    apu->DSP [APU_KON] &= ~mask;
 			    //apu->DSP [APU_KOFF] |= mask;
-			    S9xSetSoundKeyOff (c);
+			    sndSys->setSoundKeyOff(c);
 			}
 		    }
 		}
@@ -397,10 +370,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 //		S9xSetSoundVolume (reg >> 4, (signed char) byte,
 //				   (signed char) apu->DSP [reg + 1]);
 		int ch = reg >> 4;
-	    SoundData.channels[ch].volume_left = (signed char) byte;
-	    SoundData.channels[ch].volume_right = (signed char) apu->DSP [reg + 1];
-	    SoundData.channels[ch].left_vol_level = (SoundData.channels[ch].envx * (signed char) byte) / 128;
-	    SoundData.channels[ch].right_vol_level = (SoundData.channels[ch].envx * (signed char) apu->DSP [reg + 1]) / 128;
+		sndSys->setChannelVolume(ch, byte, apu->DSP[reg + 1]);
 	}
 	break;
     case APU_VOL_RIGHT + 0x00:
@@ -419,13 +389,11 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("[%d] %d volume right: %d\n", 
 				  ICPU.Scanline, reg >>4, (signed char) byte);
 #endif
+	    
 //		S9xSetSoundVolume (reg >> 4, (signed char) apu->DSP [reg - 1],
 //				   (signed char) byte);
 		int ch = reg >> 4;
-	    SoundData.channels[ch].volume_left = (signed char) apu->DSP [reg - 1];
-	    SoundData.channels[ch].volume_right = (signed char) byte;
-	    SoundData.channels[ch].left_vol_level = (SoundData.channels[ch].envx * (signed char) apu->DSP [reg - 1]) / 128;
-	    SoundData.channels[ch].right_vol_level = (SoundData.channels[ch].envx * (signed char) byte) / 128;
+		sndSys->setChannelVolume(ch, apu->DSP[reg - 1], byte);
 	}
 	break;
 
@@ -444,10 +412,11 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 #endif
 //	    S9xSetSoundHertz (reg >> 4, ((byte + (apu->DSP [reg + 1] << 8)) & FREQUENCY_MASK) * 8);
 		{
-		int ch = reg >> 4;
-		int hertz = ((byte + (apu->DSP [reg + 1] << 8)) & FREQUENCY_MASK) * 8;
-	    SoundData.channels[ch].hertz = hertz;
-	    S9xSetSoundFrequency (ch, hertz);break;
+			int ch = reg >> 4;
+			int hertz = ((byte + (apu->DSP [reg + 1] << 8)) & FREQUENCY_MASK) * 8;
+			sndSys->setChannelFrequency(ch, hertz);
+			sndSys->setSoundFrequency(ch, hertz);
+			break;
 		}
     case APU_P_HIGH + 0x00:
     case APU_P_HIGH + 0x10:
@@ -465,10 +434,10 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 //	    S9xSetSoundHertz (reg >> 4, 
 //			      (((byte << 8) + apu->DSP [reg - 1]) & FREQUENCY_MASK) * 8);
 		{
-		int ch = reg >> 4;
-		int hertz = (((byte << 8) + apu->DSP [reg - 1]) & FREQUENCY_MASK) * 8;
-	    SoundData.channels[ch].hertz = hertz;
-	    S9xSetSoundFrequency (ch, hertz);
+			int ch = reg >> 4;
+			int hertz = (((byte << 8) + apu->DSP [reg - 1]) & FREQUENCY_MASK) * 8;
+			sndSys->setChannelFrequency(ch, hertz);
+			sndSys->setSoundFrequency(ch, hertz);
 		}
 	break;
 
@@ -506,8 +475,8 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 				  ICPU.Scanline, reg>>4, byte);
 #endif
 	    {
-		S9xFixEnvelope (reg >> 4, apu->DSP [reg + 2], byte, 
-			     apu->DSP [reg + 1]);
+		sndSys->fixEnvelope(reg >> 4, apu->DSP [reg + 2], byte,
+		                    apu->DSP [reg + 1]);
 	    }
 	}
 	break;
@@ -528,8 +497,8 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 				  ICPU.Scanline, reg>>4, byte);
 #endif
 	    {
-		S9xFixEnvelope (reg >> 4, apu->DSP [reg + 1], apu->DSP [reg - 1],
-			     byte);
+		    sndSys->fixEnvelope(reg >> 4, apu->DSP [reg + 1], apu->DSP [reg - 1],
+		                        byte);
 	    }
 	}
 	break;
@@ -550,8 +519,8 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 				  ICPU.Scanline, reg>>4, byte);
 #endif
 	    {
-		S9xFixEnvelope (reg >> 4, byte, apu->DSP [reg - 2],
-			     apu->DSP [reg - 1]);
+		    sndSys->fixEnvelope (reg >> 4, byte, apu->DSP [reg - 2],
+		                         apu->DSP [reg - 1]);
 	    }
 	}
 	break;
@@ -610,7 +579,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("\n");
 	    }
 #endif
-		S9xSetFrequencyModulationEnable (byte);
+		sndSys->setFrequencyModulationEnable(byte);
 	}
 	break;
 
@@ -640,20 +609,20 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
 		S9xTraceSoundDSP ("\n");
 	    }
 #endif
-		S9xSetEchoEnable (byte);
+		sndSys->setEchoEnable(byte);
 	}
 	break;
 
     case APU_EFB:
-	S9xSetEchoFeedback ((signed char) byte);
-	break;
+	    sndSys->setEchoFeedback(byte);
+	    break;
 
     case APU_ESA:
 	break;
 
     case APU_EDL:
-	S9xSetEchoDelay (byte & 0xf);
-	break;
+	    sndSys->setEchoDelay(byte & 0xf);
+	    break;
 
     case APU_C0:
     case APU_C1:
@@ -663,7 +632,7 @@ void S9xSetAPUDSP (uint8 byte, struct SAPU *apu, struct SIAPU *iapu)
     case APU_C5:
     case APU_C6:
     case APU_C7:
-	S9xSetFilterCoefficient (reg >> 4, (signed char) byte);
+	    sndSys->setFilterCoefficient (reg >> 4, (signed char) byte);
 	break;
     default:
 // XXX
@@ -774,10 +743,10 @@ uint8 S9xGetAPUDSP ()
     case APU_OUTX + 0x50:
     case APU_OUTX + 0x60:
     case APU_OUTX + 0x70:
-	if (SoundData.channels [reg >> 4].state == SOUND_SILENT)
-	    return (0);
-	return ((SoundData.channels [reg >> 4].sample >> 8) |
-		(SoundData.channels [reg >> 4].sample & 0xff));
+	    if (sndSys->getChannelState(reg >> 4) == SOUND_SILENT)
+		    return (0);
+	    return ((sndSys->getChannelSample(reg >> 4) >> 8) |
+	            (sndSys->getChannelSample(reg >> 4) & 0xff));
 
     case APU_ENVX + 0x00:
     case APU_ENVX + 0x10:
@@ -787,7 +756,7 @@ uint8 S9xGetAPUDSP ()
     case APU_ENVX + 0x50:
     case APU_ENVX + 0x60:
     case APU_ENVX + 0x70:
-	return ((uint8) S9xGetEnvelopeHeight (reg >> 4));
+	return sndSys->getEnvelopeHeight(reg >> 4);
 
     case APU_ENDX:
 // To fix speech in Magical Drop 2 6/11/00

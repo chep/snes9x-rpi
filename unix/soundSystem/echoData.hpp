@@ -41,8 +41,10 @@
 #define _ECHODATA_HPP_
 
 #include <boost/cstdint.hpp>
+#include <vector>
 
 #include "exceptions.hpp"
+#include "soundConstants.hpp"
 
 #define ECHO_LOOP_SIZE 16
 
@@ -62,11 +64,17 @@ public:
 	                int masterVolume[2]);
 	void reset();
 
+	void setDelay(int delay, unsigned playbackRate) throw (SnesException);
+
 	boost::int16_t* getBuffer() {return buffer;}
 	boost::int16_t* getDummyBuffer() {return dummyBuffer;}
 
+	void setWriteEnabled(bool w) {writeEnabled = w;}
+	void setVolume(int left, int right);
+	void setFeedBack(int f) { CLIP8(f); feedback = f;}
 
-private:
+	void setFilterCoefficient (int tap, int value);
+
 	void resetBuffer() {std::fill(buffer, buffer + bufferSize, 0);}
 
 private:
@@ -74,6 +82,7 @@ private:
 	boost::int16_t *buffer;
 	boost::int16_t *dummyBuffer;
 	int loop [ECHO_LOOP_SIZE];
+#warning peut etre inutile
     short volumeLeft;
     short volumeRight;
     bool enable;
@@ -85,7 +94,7 @@ private:
     int channelEnable;
 	bool noFilter;
 	int volume[2];
-	int filterTaps [8];
+	std::vector<int> filterTaps;
 	unsigned long Z;
 };
 

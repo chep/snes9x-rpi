@@ -59,6 +59,7 @@
 #include <sys/mman.h>
 #include <vector>
 #include <boost/shared_ptr.hpp>
+#include <boost/chrono.hpp>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -244,8 +245,15 @@ int main (int argc, char **argv)
     if (!Memory.Init () || !S9xInitAPU())
 	OutOfMemory ();
 
-   (void) S9xInitSound (Settings.SoundPlaybackRate, Settings.Stereo,
-			 Settings.SoundBufferSize);
+    try
+    {
+	    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "hw:0,0");
+    }
+    catch (SnesException e)
+    {
+	    std::cerr<<"Exception occurs during sound system init "<<e<<std::endl;
+	    S9xExit();
+    }
 
    if (!Settings.APUEnabled)
 	   sndSys->setMute(true);
@@ -633,19 +641,6 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 	return(TRUE);
 }
 
-#ifndef _ZAURUS
-static unsigned long now ()
-{
-    static unsigned long seconds_base = 0;
-    struct timeval tp;
-    gettimeofday (&tp, NULL);
-    if (!seconds_base)
-	seconds_base = tp.tv_sec;
-
-    return ((tp.tv_sec - seconds_base) * 1000 + tp.tv_usec / 1000);
-}
-#endif
-
 void _makepath (char *path, const char *, const char *dir,
 		const char *fname, const char *ext)
 {
@@ -725,16 +720,6 @@ void InitTimer ()
 {
     struct itimerval timeout;
     struct sigaction sa;
-    
-    try
-    {
-	    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "hw:0,0");
-    }
-    catch (SnesException e)
-    {
-	    std::cerr<<"Exception occurs during sound system init "<<e<<std::endl;
-	    S9xExit();
-    }
 
     sa.sa_handler = (SIG_PF) SoundTrigger;
 
@@ -746,7 +731,7 @@ void InitTimer ()
 
     sigemptyset (&sa.sa_mask);
     sigaction (SIGALRM, &sa, NULL);
-    
+
     timeout.it_interval.tv_sec = 0;
     timeout.it_interval.tv_usec = 10000;
     timeout.it_value.tv_sec = 0;
@@ -754,6 +739,13 @@ void InitTimer ()
     if (setitimer (ITIMER_REAL, &timeout, NULL) < 0)
 	perror ("setitimer");
 }
+
+
+typedef boost::posix_time::milliseconds ms_t;
+typedef boost::chrono::duration<double> duration_t;
+
+typedef boost::chrono::duration<long long, boost::micro> microseconds;
+typedef boost::chrono::system_clock::time_point boostTime_t;
 
 void S9xSyncSpeed ()
 {
@@ -768,365 +760,54 @@ void S9xSyncSpeed ()
 	}
 
 
-    if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
-    {
-	static struct timeval next1 = {0, 0};
-	struct timeval now;
-
-	while (gettimeofday (&now, NULL) < 0) ;
-	if (next1.tv_sec == 0)
+	if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
 	{
-	    next1 = now;
-	    next1.tv_usec++;
-	}
+		boostTime_t now(boost::chrono::system_clock::now());
+		static boostTime_t next1(now + microseconds(1));
 
-	if (timercmp(&next1, &now, >))
-	{
-	    if (IPPU.SkippedFrames == 0)
-	    {
-		do
+
+		if (next1 > now)
 		{
-		    CHECK_SOUND ();
-//		    S9xProcessEvents (FALSE);
-		    while (gettimeofday (&now, NULL) < 0) ;
-		} while (timercmp(&next1, &now, >));
-	    }
-	    IPPU.RenderThisFrame = TRUE;
-	    IPPU.SkippedFrames = 0;
+			if (IPPU.SkippedFrames == 0)
+				boost::this_thread::sleep_until(next1);
+			IPPU.RenderThisFrame = TRUE;
+			IPPU.SkippedFrames = 0;
+		}
+		else
+		{
+			if (IPPU.SkippedFrames < mfs)
+			{
+				IPPU.SkippedFrames++;
+				IPPU.RenderThisFrame = FALSE;
+			}
+			else
+			{
+				IPPU.RenderThisFrame = TRUE;
+				IPPU.SkippedFrames = 0;
+				next1 = now;
+			}
+		}
+		next1 += microseconds(Settings.FrameTime);
 	}
 	else
 	{
-	    if (IPPU.SkippedFrames < mfs)
-	    {
-		IPPU.SkippedFrames++;
-		IPPU.RenderThisFrame = FALSE;
-	    }
-	    else
-	    {
-		IPPU.RenderThisFrame = TRUE;
-		IPPU.SkippedFrames = 0;
-		next1 = now;
-	    }
+		if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames
+		                         : Settings.SkipFrames))
+		{
+			IPPU.FrameSkip = 0;
+			IPPU.SkippedFrames = 0;
+			IPPU.RenderThisFrame = TRUE;
+		}
+		else
+		{
+			IPPU.SkippedFrames++;
+			IPPU.RenderThisFrame = FALSE;
+		}
 	}
-	next1.tv_usec += Settings.FrameTime;
-	if (next1.tv_usec >= 1000000)
-	{
-	    next1.tv_sec += next1.tv_usec / 1000000;
-	    next1.tv_usec %= 1000000;
-	}
-    }
-    else
-    {
-	if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames
-						    : Settings.SkipFrames))
-	{
-	    IPPU.FrameSkip = 0;
-	    IPPU.SkippedFrames = 0;
-	    IPPU.RenderThisFrame = TRUE;
-	}
-	else
-	{
-	    IPPU.SkippedFrames++;
-	    IPPU.RenderThisFrame = FALSE;
-	}
-    }
 }
 
-
-
-static long log2 (long num)
-{
-    long n = 0;
-
-    while (num >>= 1)
-	n++;
-
-    return (n);
-}
-
-#ifndef _ZAURUS
-static long power (int num, int pow)
-{
-    long val = num;
-    int i;
-    
-    if (pow == 0)
-	return (1);
-
-    for (i = 1; i < pow; i++)
-	val *= num;
-
-    return (val);
-}
-#endif
-
-static int Rates[8] =
-{
-    0, 8192, 11025, 16000, 22050, 29300, 36600, 44100
-};
-
-static int BufferSizes [8] =
-{
-    0, 256, 256, 256, 512, 512, 1024, 1024
-};
-
-bool8_32 S9xOpenSoundDevice (int mode, bool8_32 stereo, int buffer_size)
-{
-    int J, K;
-
-
-	so.sixteen_bit = TRUE;
-    so.stereo = stereo;
-    
-    so.playback_rate = Rates[mode & 0x07];
-
-    S9xSetPlaybackRate (so.playback_rate);
-	so.buffer_size = buffer_size = BufferSizes [mode & 7];
-		
-    if (buffer_size > MAX_BUFFER_SIZE / 4)
-	    buffer_size = MAX_BUFFER_SIZE / 4;
-    buffer_size *= 2;
-    if (so.stereo)
-	buffer_size *= 2;
-	    
-    printf ("Rate: %d, Buffer size: %d, 16-bit: %s, Stereo: %s, Encoded: %s\n",
-	    so.playback_rate, so.buffer_size, so.sixteen_bit ? "yes" : "no",
-	    so.stereo ? "yes" : "no", so.encoded ? "yes" : "no");
-
-    return (TRUE);
-}
-
-void S9xUnixProcessSound (void)
-{
-}
-
-static uint8 Buf[MAX_BUFFER_SIZE] __attribute__((aligned(4)));
 
 static volatile bool8 block_signal = FALSE;
 static volatile bool8 block_generate_sound = FALSE;
 static volatile bool8 pending_signal = FALSE;
 
-
-#if 0
-void S9xParseConfigFile ()
-{
-    int i, t = 0;
-    char *b, buf[10];
-    struct ffblk f;
-
-    set_config_file("SNES9X.CFG");
-
-    if (findfirst("SNES9X.CFG", &f, 0) != 0)
-    {
-        set_config_int("Graphics", "VideoMode", -1);
-        set_config_int("Graphics", "AutoFrameskip", 1);
-        set_config_int("Graphics", "Frameskip", 0);
-        set_config_int("Graphics", "Shutdown", 1);
-        set_config_int("Graphics", "FrameTimePAL", 20000);
-        set_config_int("Graphics", "FrameTimeNTSC", 16667);
-        set_config_int("Graphics", "Transparency", 0);
-        set_config_int("Graphics", "HiColor", 0);
-        set_config_int("Graphics", "Hi-ResSupport", 0);
-        set_config_int("Graphics", "CPUCycles", 100);
-        set_config_int("Graphics", "Scale", 0);
-        set_config_int("Graphics", "VSync", 0);
-        set_config_int("Sound", "APUEnabled", 1);
-        set_config_int("Sound", "SoundPlaybackRate", 7);
-        set_config_int("Sound", "Stereo", 1);
-        set_config_int("Sound", "SoundBufferSize", 256);
-        set_config_int("Sound", "SPCToCPURatio", 2);
-        set_config_int("Sound", "Echo", 1);
-        set_config_int("Sound", "SampleCaching", 1);
-        set_config_int("Sound", "MasterVolume", 1);
-        set_config_int("Peripherals", "Mouse", 1);
-        set_config_int("Peripherals", "SuperScope", 1);
-        set_config_int("Peripherals", "MultiPlayer5", 1);
-        set_config_int("Peripherals", "Controller", 0);
-        set_config_int("Controllers", "Type", JOY_TYPE_AUTODETECT);
-        set_config_string("Controllers", "Button1", "A");
-        set_config_string("Controllers", "Button2", "B");
-        set_config_string("Controllers", "Button3", "X");
-        set_config_string("Controllers", "Button4", "Y");
-        set_config_string("Controllers", "Button5", "TL");
-        set_config_string("Controllers", "Button6", "TR");
-        set_config_string("Controllers", "Button7", "START");
-        set_config_string("Controllers", "Button8", "SELECT");
-        set_config_string("Controllers", "Button9", "NONE");
-        set_config_string("Controllers", "Button10", "NONE");
-    }
-
-    mode = get_config_int("Graphics", "VideoMode", -1);
-    Settings.SkipFrames = get_config_int("Graphics", "AutoFrameskip", 1);
-    if (!Settings.SkipFrames)
-       Settings.SkipFrames = get_config_int("Graphics", "Frameskip", AUTO_FRAMERATE);
-    else
-       Settings.SkipFrames = AUTO_FRAMERATE;
-    Settings.ShutdownMaster = get_config_int("Graphics", "Shutdown", TRUE);
-    Settings.FrameTimePAL = get_config_int("Graphics", "FrameTimePAL", 20000);
-    Settings.FrameTimeNTSC = get_config_int("Graphics", "FrameTimeNTSC", 16667);
-    Settings.FrameTime = Settings.FrameTimeNTSC;
-    Settings.Transparency = get_config_int("Graphics", "Transparency", FALSE);
-    Settings.SixteenBit = get_config_int("Graphics", "HiColor", FALSE);
-    Settings.SupportHiRes = get_config_int("Graphics", "Hi-ResSupport", FALSE);
-    i = get_config_int("Graphics", "CPUCycles", 100);
-    Settings.H_Max = (i * SNES_CYCLES_PER_SCANLINE) / i;
-    stretch = get_config_int("Graphics", "Scale", 0);
-    _vsync = get_config_int("Graphics", "VSync", 0);
-
-    Settings.APUEnabled = get_config_int("Sound", "APUEnabled", TRUE);
-    Settings.SoundPlaybackRate = get_config_int("Sound", "SoundPlaybackRate", 7);
-    Settings.Stereo = get_config_int("Sound", "Stereo", TRUE);
-    Settings.SoundBufferSize = get_config_int("Sound", "SoundBufferSize", 256);
-    Settings.SPCTo65c816Ratio = get_config_int("Sound", "SPCToCPURatio", 2);
-    Settings.DisableSoundEcho = get_config_int("Sound", "Echo", TRUE) ? FALSE : TRUE;
-    Settings.DisableSampleCaching = get_config_int("Sound", "SampleCaching", TRUE) ? FALSE : TRUE;
-    Settings.DisableMasterVolume = get_config_int("Sound", "MasterVolume", TRUE) ? FALSE : TRUE;
-
-    Settings.Mouse = get_config_int("Peripherals", "Mouse", TRUE);
-    Settings.SuperScope = get_config_int("Peripherals", "SuperScope", TRUE);
-    Settings.MultiPlayer5 = get_config_int("Peripherals", "MultiPlayer5", TRUE);
-    Settings.ControllerOption = (uint32)get_config_int("Peripherals", "Controller", SNES_MULTIPLAYER5);
-
-    joy_type = get_config_int("Controllers", "Type", JOY_TYPE_AUTODETECT);
-    for (i = 0; i < 10; i++)
-    {
-        sprintf(buf, "Button%d", i+1);
-        b = get_config_string("Controllers", buf, "NONE");
-        if (!strcasecmp(b, "A"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_A_MASK;}
-        else if (!strcasecmp(b, "B"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_B_MASK;}
-        else if (!strcasecmp(b, "X"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_X_MASK;}
-        else if (!strcasecmp(b, "Y"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_Y_MASK;}
-        else if (!strcasecmp(b, "TL"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_TL_MASK;}
-        else if (!strcasecmp(b, "TR"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_TR_MASK;}
-        else if (!strcasecmp(b, "START"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_START_MASK;}
-        else if (!strcasecmp(b, "SELECT"))
-        {JOY_BUTTON_INDEX[t] = i; SNES_BUTTON_MASKS[t++] = SNES_SELECT_MASK;}
-    }
-}
-#endif
-#ifndef _ZAURUS
-static int S9xCompareSDD1IndexEntries (const void *p1, const void *p2)
-{
-    return (*(uint32 *) p1 - *(uint32 *) p2);
-}
-
-void S9xLoadSDD1Data ()
-{
-    char filename [_MAX_PATH + 1];
-    char index [_MAX_PATH + 1];
-    char data [_MAX_PATH + 1];
-    char patch [_MAX_PATH + 1];
-
-    Memory.FreeSDD1Data ();
-
-    strcpy (filename, S9xGetSnapshotDirectory ());
-
-    if (strncmp (Memory.ROMName, "Star Ocean", 10) == 0)
-	strcat (filename, "/socnsdd1");
-    else
-	strcat (filename, "/sfa2sdd1");
-
-    DIR *dir = opendir (filename);
-
-    index [0] = 0;
-    data [0] = 0;
-    patch [0] = 0;
-
-    if (dir)
-    {
-	struct dirent *d;
-	
-	while ((d = readdir (dir)))
-	{
-	    if (strcasecmp (d->d_name, "SDD1GFX.IDX") == 0)
-	    {
-		strcpy (index, filename);
-		strcat (index, "/");
-		strcat (index, d->d_name);
-	    }
-	    else
-	    if (strcasecmp (d->d_name, "SDD1GFX.DAT") == 0)
-	    {
-		strcpy (data, filename);
-		strcat (data, "/");
-		strcat (data, d->d_name);
-	    }
-	    if (strcasecmp (d->d_name, "SDD1GFX.PAT") == 0)
-	    {
-		strcpy (patch, filename);
-		strcat (patch, "/");
-		strcat (patch, d->d_name);
-	    }
-	}
-	closedir (dir);
-
-	if (strlen (index) && strlen (data))
-	{
-	    FILE *fs = fopen (index, "rb");
-	    int len = 0;
-
-	    if (fs)
-	    {
-		// Index is stored as a sequence of entries, each entry being
-		// 12 bytes consisting of:
-		// 4 byte key: (24bit address & 0xfffff * 16) | translated block
-		// 4 byte ROM offset
-		// 4 byte length
-		fseek (fs, 0, SEEK_END);
-		len = ftell (fs);
-		rewind (fs);
-		Memory.SDD1Index = (uint8 *) malloc (len);
-		fread (Memory.SDD1Index, 1, len, fs);
-		fclose (fs);
-		Memory.SDD1Entries = len / 12;
-
-		if (!(fs = fopen (data, "rb")))
-		{
-		    free ((char *) Memory.SDD1Index);
-		    Memory.SDD1Index = NULL;
-		    Memory.SDD1Entries = 0;
-		}
-		else
-		{
-		    fseek (fs, 0, SEEK_END);
-		    len = ftell (fs);
-		    rewind (fs);
-		    Memory.SDD1Data = (uint8 *) malloc (len);
-		    fread (Memory.SDD1Data, 1, len, fs);
-		    fclose (fs);
-
-		    if (strlen (patch) > 0 &&
-			(fs = fopen (patch, "rb")))
-		    {
-			fclose (fs);
-		    }
-#ifdef MSB_FIRST
-		    // Swap the byte order of the 32-bit value triplets on
-		    // MSBFirst machines.
-		    uint8 *ptr = Memory.SDD1Index;
-		    for (int i = 0; i < Memory.SDD1Entries; i++, ptr += 12)
-		    {
-			SWAP_DWORD ((*(uint32 *) (ptr + 0)));
-			SWAP_DWORD ((*(uint32 *) (ptr + 4)));
-			SWAP_DWORD ((*(uint32 *) (ptr + 8)));
-		    }
-#endif
-		    qsort (Memory.SDD1Index, Memory.SDD1Entries, 12,
-			   S9xCompareSDD1IndexEntries);
-		}
-	    }
-	}
-	else
-	{
-	    printf ("Decompressed data pack not found in '%s'.\n", filename);
-	}
-    }
-}
-#endif

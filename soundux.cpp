@@ -72,222 +72,124 @@
   Super NES and Super Nintendo Entertainment System are trademarks of
   Nintendo Co., Limited and its subsidiary companies.
 *******************************************************************************/
-#ifdef __DJGPP__
-#include <allegro.h>
-#undef TRUE
-#endif
+// #ifdef __DJGPP__
+// #include <allegro.h>
+// #undef TRUE
+// #endif
 
-#include <iostream>
-
-
-
-
-
-#include "snes9x.h"
-#include "apu.h"
-#include "soundux.h"
-#include "memmap.h"
-#include "cpuexec.h"
-
-extern int Echo [24000];
-extern int DummyEchoBuffer [SOUND_BUFFER_SIZE];
-extern int MixBuffer [SOUND_BUFFER_SIZE];
-extern int EchoBuffer [SOUND_BUFFER_SIZE];
-extern int FilterTaps [8];
-extern unsigned long Z;
-extern int Loop [16];
-
-extern long FilterValues[4][2];
-extern int NoiseFreq [32];
-
-#undef ABS
-#define ABS(a) ((a) < 0 ? -(a) : (a))
-
-
-#define VOL_DIV8  0x8000
-#define VOL_DIV16 0x0080
-#define ENVX_SHIFT 24
+// #include <iostream>
 
 
 
 
 
+// #include "snes9x.h"
+// #include "apu.h"
+// #include "soundux.h"
+// #include "memmap.h"
+// #include "cpuexec.h"
 
-void S9xSetEchoFeedback (int feedback)
-{
-    CLIP8(feedback);
-    SoundData.echo_feedback = feedback;
-}
+// extern int Echo [24000];
+// extern int DummyEchoBuffer [SOUND_BUFFER_SIZE];
+// extern int MixBuffer [SOUND_BUFFER_SIZE];
+// extern int EchoBuffer [SOUND_BUFFER_SIZE];
+// extern int FilterTaps [8];
+// extern unsigned long Z;
+// extern int Loop [16];
 
-void S9xSetEchoDelay (int delay)
-{
-    SoundData.echo_buffer_size = (512 * delay * so.playback_rate) / 32000;
-    if (so.stereo)
-		SoundData.echo_buffer_size <<= 1;
-    if (SoundData.echo_buffer_size)
-		SoundData.echo_ptr %= SoundData.echo_buffer_size;
-    else
-		SoundData.echo_ptr = 0;
-    S9xSetEchoEnable (APU.DSP [APU_EON]);
-}
+// extern long FilterValues[4][2];
+// extern int NoiseFreq [32];
 
-void S9xSetEchoWriteEnable (uint8 byte)
-{
-    SoundData.echo_write_enabled = byte;
-    S9xSetEchoDelay (APU.DSP [APU_EDL] & 15);
-}
+// #undef ABS
+// #define ABS(a) ((a) < 0 ? -(a) : (a))
 
-void S9xSetFrequencyModulationEnable (uint8 byte)
-{
-    SoundData.pitch_mod = byte & ~1;
-}
 
-void S9xSetSoundKeyOff (int channel)
-{
-    Channel *ch = &SoundData.channels[channel];
+// #define VOL_DIV8  0x8000
+// #define VOL_DIV16 0x0080
+// #define ENVX_SHIFT 24
+
+
+
+
+
+
+
+// void S9xFixSoundAfterSnapshotLoad ()
+// {
+//     SoundData.echo_write_enabled = !(APU.DSP [APU_FLG] & 0x20);
+//     SoundData.echo_channel_enable = APU.DSP [APU_EON];
+//     S9xSetEchoDelay (APU.DSP [APU_EDL] & 0xf);
+//     S9xSetEchoFeedback ((signed char) APU.DSP [APU_EFB]);
 	
-    if (ch->state != SOUND_SILENT)
-    {
-		ch->state = SOUND_RELEASE;
-		ch->mode = MODE_RELEASE;
-		S9xSetEnvRate (ch, 8, -1, 0);
-    }
-}
+//     S9xSetFilterCoefficient (0, (signed char) APU.DSP [APU_C0]);
+//     S9xSetFilterCoefficient (1, (signed char) APU.DSP [APU_C1]);
+//     S9xSetFilterCoefficient (2, (signed char) APU.DSP [APU_C2]);
+//     S9xSetFilterCoefficient (3, (signed char) APU.DSP [APU_C3]);
+//     S9xSetFilterCoefficient (4, (signed char) APU.DSP [APU_C4]);
+//     S9xSetFilterCoefficient (5, (signed char) APU.DSP [APU_C5]);
+//     S9xSetFilterCoefficient (6, (signed char) APU.DSP [APU_C6]);
+//     S9xSetFilterCoefficient (7, (signed char) APU.DSP [APU_C7]);
+//     for (int i = 0; i < 8; i++)
+//     {
+// 		SoundData.channels[i].needs_decode = TRUE;
+// 		S9xSetSoundFrequency (i, SoundData.channels[i].hertz);
+// 		SoundData.channels [i].envxx = SoundData.channels [i].envx << ENVX_SHIFT;
+// 		SoundData.channels [i].next_sample = 0;
+// 		SoundData.channels [i].interpolate = 0;
+// 		SoundData.channels [i].previous [0] = (int32) SoundData.channels [i].previous16 [0];
+// 		SoundData.channels [i].previous [1] = (int32) SoundData.channels [i].previous16 [1];
+//     }
+//     SoundData.master_volume [Settings.ReverseStereo] = SoundData.master_volume_left;
+//     SoundData.master_volume [1 ^ Settings.ReverseStereo] = SoundData.master_volume_right;
+//     SoundData.echo_volume [Settings.ReverseStereo] = SoundData.echo_volume_left;
+//     SoundData.echo_volume [1 ^ Settings.ReverseStereo] = SoundData.echo_volume_right;
+//     IAPU.Scanline = 0;
+// }
 
-void S9xFixSoundAfterSnapshotLoad ()
-{
-    SoundData.echo_write_enabled = !(APU.DSP [APU_FLG] & 0x20);
-    SoundData.echo_channel_enable = APU.DSP [APU_EON];
-    S9xSetEchoDelay (APU.DSP [APU_EDL] & 0xf);
-    S9xSetEchoFeedback ((signed char) APU.DSP [APU_EFB]);
+// void S9xSetSoundADSR (int channel, int attack_rate, int decay_rate,
+// 					  int sustain_rate, int sustain_level, int release_rate)
+// {
+//     SoundData.channels[channel].attack_rate = attack_rate;
+//     SoundData.channels[channel].decay_rate = decay_rate;
+//     SoundData.channels[channel].sustain_rate = sustain_rate;
+//     SoundData.channels[channel].release_rate = release_rate;
+//     SoundData.channels[channel].sustain_level = sustain_level + 1;
 	
-    S9xSetFilterCoefficient (0, (signed char) APU.DSP [APU_C0]);
-    S9xSetFilterCoefficient (1, (signed char) APU.DSP [APU_C1]);
-    S9xSetFilterCoefficient (2, (signed char) APU.DSP [APU_C2]);
-    S9xSetFilterCoefficient (3, (signed char) APU.DSP [APU_C3]);
-    S9xSetFilterCoefficient (4, (signed char) APU.DSP [APU_C4]);
-    S9xSetFilterCoefficient (5, (signed char) APU.DSP [APU_C5]);
-    S9xSetFilterCoefficient (6, (signed char) APU.DSP [APU_C6]);
-    S9xSetFilterCoefficient (7, (signed char) APU.DSP [APU_C7]);
-    for (int i = 0; i < 8; i++)
-    {
-		SoundData.channels[i].needs_decode = TRUE;
-		S9xSetSoundFrequency (i, SoundData.channels[i].hertz);
-		SoundData.channels [i].envxx = SoundData.channels [i].envx << ENVX_SHIFT;
-		SoundData.channels [i].next_sample = 0;
-		SoundData.channels [i].interpolate = 0;
-		SoundData.channels [i].previous [0] = (int32) SoundData.channels [i].previous16 [0];
-		SoundData.channels [i].previous [1] = (int32) SoundData.channels [i].previous16 [1];
-    }
-    SoundData.master_volume [Settings.ReverseStereo] = SoundData.master_volume_left;
-    SoundData.master_volume [1 ^ Settings.ReverseStereo] = SoundData.master_volume_right;
-    SoundData.echo_volume [Settings.ReverseStereo] = SoundData.echo_volume_left;
-    SoundData.echo_volume [1 ^ Settings.ReverseStereo] = SoundData.echo_volume_right;
-    IAPU.Scanline = 0;
-}
-
-void S9xSetFilterCoefficient (int tap, int value)
-{
-    FilterTaps [tap & 7] = value;
-    SoundData.no_filter = (FilterTaps [0] == 127 || FilterTaps [0] == 0) && 
-		FilterTaps [1] == 0   &&
-		FilterTaps [2] == 0   &&
-		FilterTaps [3] == 0   &&
-		FilterTaps [4] == 0   &&
-		FilterTaps [5] == 0   &&
-		FilterTaps [6] == 0   &&
-		FilterTaps [7] == 0;
-}
-
-void S9xSetSoundADSR (int channel, int attack_rate, int decay_rate,
-					  int sustain_rate, int sustain_level, int release_rate)
-{
-    SoundData.channels[channel].attack_rate = attack_rate;
-    SoundData.channels[channel].decay_rate = decay_rate;
-    SoundData.channels[channel].sustain_rate = sustain_rate;
-    SoundData.channels[channel].release_rate = release_rate;
-    SoundData.channels[channel].sustain_level = sustain_level + 1;
-	
-    switch (SoundData.channels[channel].state)
-    {
-    case SOUND_ATTACK:
-    	S9xSetEnvRate (&SoundData.channels [channel], attack_rate, 1, 127);
-//		S9xSetEnvelopeRate (channel, attack_rate, 1, 127);
-		break;
+//     switch (SoundData.channels[channel].state)
+//     {
+//     case SOUND_ATTACK:
+//     	S9xSetEnvRate (&SoundData.channels [channel], attack_rate, 1, 127);
+// //		S9xSetEnvelopeRate (channel, attack_rate, 1, 127);
+// 		break;
 		
-    case SOUND_DECAY:
-    	S9xSetEnvRate (&SoundData.channels [channel], decay_rate, -1,
-			(MAX_ENVELOPE_HEIGHT * (sustain_level + 1)) >> 3);
-//		S9xSetEnvelopeRate (channel, decay_rate, -1,
-//			(MAX_ENVELOPE_HEIGHT * (sustain_level + 1)) >> 3);
-		break;
-    case SOUND_SUSTAIN:
-    	S9xSetEnvRate (&SoundData.channels [channel], sustain_rate, -1, 0);
-//		S9xSetEnvelopeRate (channel, sustain_rate, -1, 0);
-		break;
-    }
-}
+//     case SOUND_DECAY:
+//     	S9xSetEnvRate (&SoundData.channels [channel], decay_rate, -1,
+// 			(MAX_ENVELOPE_HEIGHT * (sustain_level + 1)) >> 3);
+// //		S9xSetEnvelopeRate (channel, decay_rate, -1,
+// //			(MAX_ENVELOPE_HEIGHT * (sustain_level + 1)) >> 3);
+// 		break;
+//     case SOUND_SUSTAIN:
+//     	S9xSetEnvRate (&SoundData.channels [channel], sustain_rate, -1, 0);
+// //		S9xSetEnvelopeRate (channel, sustain_rate, -1, 0);
+// 		break;
+//     }
+// }
 
 
-int S9xGetEnvelopeHeight (int channel)
-{
-    if ((Settings.SoundEnvelopeHeightReading ||
-		SNESGameFixes.SoundEnvelopeHeightReading2) &&
-        SoundData.channels[channel].state != SOUND_SILENT &&
-        SoundData.channels[channel].state != SOUND_GAIN)
-    {
-        return (SoundData.channels[channel].envx);
-    }
+
+
+
+// bool8_32 S9xInitSound (int mode, bool8_32 stereo, int buffer_size)
+// {
+//     if (!S9xOpenSoundDevice (mode, stereo, buffer_size))
+//     {
+// 		S9xMessage (S9X_ERROR, S9X_SOUND_DEVICE_OPEN_FAILED,
+// 			"Sound device open failed");
+// 		return (0);
+//     }
 	
-    //siren fix from XPP
-    if (SNESGameFixes.SoundEnvelopeHeightReading2 &&
-        SoundData.channels[channel].state != SOUND_SILENT)
-    {
-        return (SoundData.channels[channel].envx);
-    }
-	
-    return (0);
-}
-
-
-
-
-
-void S9xSetPlaybackRate (uint32 playback_rate)
-{
-    so.playback_rate = playback_rate;
-    so.err_rate = (uint32) (SNES_SCANLINE_TIME * FIXED_POINT / (1.0 / (double) so.playback_rate));
-    S9xSetEchoDelay (APU.DSP [APU_EDL] & 0xf);
-    for (int i = 0; i < 8; i++)
-		S9xSetSoundFrequency (i, SoundData.channels [i].hertz);
-}
-
-bool8_32 S9xInitSound (int mode, bool8_32 stereo, int buffer_size)
-{
-    so.sound_fd = -1;
-    so.sound_switch = 255;
-	
-    so.playback_rate = 0;
-    so.buffer_size = 0;
-    so.stereo = stereo;
-    so.sixteen_bit = Settings.SixteenBitSound;
-    so.encoded = FALSE;
-    
-    S9xResetSound (TRUE);
-	
-    if (!(mode & 7))
-		return (1);
-	
-    S9xSetSoundMute (TRUE);
-    if (!S9xOpenSoundDevice (mode, stereo, buffer_size))
-    {
-		S9xMessage (S9X_ERROR, S9X_SOUND_DEVICE_OPEN_FAILED,
-			"Sound device open failed");
-		return (0);
-    }
-	
-    return (1);
-}
+//     return (1);
+// }
 
 
 

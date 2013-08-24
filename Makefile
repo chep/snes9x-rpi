@@ -1,8 +1,10 @@
 
 CXX = g++
 
-INCLDIRS=-Iunix -Iunix/input -Iunzip -Iunix/soundSystem -I.
+INCLDIRS=-Iunix -Iunix/input -Iunzip -Iunix/soundSystem -I. -I/home/chep/poubelle/duma_2_5_15 
 LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
+
+USEFULL_FLAGS=-Wall -Wextra
 
 OPTIMISE= -D_ZAURUS -g -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
@@ -17,11 +19,13 @@ CXXFLAGS = $(OPTIMISE) \
 -DSPC700_SHUTDOWN \
 $(SOUNDDEFINES) \
 $(UNZIPDEFINES) \
--DNO_INLINE_SET_GET
+-DNO_INLINE_SET_GET \
+$(USEFULL_FLAGS)
 
 CFLAGS=$(CXXFLAGS)
 
-LDFLAGS=-lboost_serialization -lSDL -lstdc++ -lz -lSDL_ttf -lboost_thread -lasound -lboost_system
+LDFLAGS=-lSDL -lstdc++ -lz -lSDL_ttf -lasound\
+        -lboost_system -lboost_thread -lboost_serialization -lboost_chrono
 
 SNES9X_SRC = $(wildcard *.cpp)
 SNES9X_SRC += $(wildcard unix/*.cpp)

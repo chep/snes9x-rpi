@@ -1,9 +1,14 @@
+#include <iostream>
+
 #include "echoData.hpp"
 #include "soundConstants.hpp"
 #include "snes9x.h"
+#include "apu.h"
+
 
 /********************************** Globals ***********************************/
 extern struct SSettings Settings;
+extern "C" struct SAPU APU;
 
 
 /************************************ Code ************************************/
@@ -19,13 +24,16 @@ EchoData::EchoData(unsigned bufferSize) throw (SnesException):
 	writeEnabled(false),
 	channelEnable(0),
 	noFilter(true),
+	filterTaps(8),
 	Z(0)
 {
 	buffer = new boost::int16_t[bufferSize];
 	dummyBuffer = new boost::int16_t[bufferSize];
-	if (!buffer)
+	echo = new boost::int16_t[24000];
+	if (!buffer || !dummyBuffer || !echo)
 		throw SnesException("Unable to allocate echo buffer.");
 	std::fill(buffer, buffer + bufferSize, 0);
+	std::fill(echo, echo + sizeof(echo), 0);
 	std::fill(loop, loop + ECHO_LOOP_SIZE, 0);
 	volume[0] = volume[1] = 0;
 }
@@ -47,11 +55,10 @@ void EchoData::mixSamples(boost::int16_t *audioBuffer,
                           int masterVolume[2])
 {
 	int I;
-	resetBuffer();
 	if (noFilter)
 	{
 		// ... but no filter defined.
-		for (int J = 0; J < audioBufferSize; J++)
+		for (unsigned J = 0; J < audioBufferSize; J++)
 		{
 			int E = echo[ptr];
 			echo[ptr] = (E * feedback) / 128 + buffer[J];
@@ -68,7 +75,7 @@ void EchoData::mixSamples(boost::int16_t *audioBuffer,
 	else
 	{
 		// ... with filter defined.
-		for (int J = 0; J < audioBufferSize; J++)
+		for (unsigned J = 0; J < audioBufferSize; J++)
 		{
 			int E = echo[ptr];
 			loop[(Z - 0) & 15] = E;
@@ -101,7 +108,7 @@ void EchoData::reset()
 {
 	ptr = 0;
 	feedback = 0;
-	bufferSize = 1;
+	echoBufferSize = 1;
 	volumeLeft = 0;
 	volumeRight = 0;
 	enable = 0;
@@ -109,7 +116,15 @@ void EchoData::reset()
 	channelEnable = 0;
 	volume[0] = 0;
 	volume[1] = 0;
-    noFilter = true;
+	noFilter = true;
+	filterTaps[0] = 127;
+    filterTaps[1] = 0;
+    filterTaps[2] = 0;
+    filterTaps[3] = 0;
+    filterTaps[4] = 0;
+    filterTaps[5] = 0;
+    filterTaps[6] = 0;
+    filterTaps[7] = 0;
 }
 
 
@@ -125,4 +140,37 @@ void EchoData::setEnable(boost::uint8_t byte)
     }
 
     enable = byte;
+}
+
+
+void EchoData::setDelay(int delay, unsigned playbackRate) throw (SnesException)
+{
+    echoBufferSize = (512 * delay * playbackRate) / 32000;
+    echoBufferSize <<= 1;
+    if (echoBufferSize)
+		ptr %= echoBufferSize;
+    else
+		ptr = 0;
+    setEnable (APU.DSP[APU_EON]);
+}
+
+
+void EchoData::setVolume(int left, int right)
+{
+	#warning ajouter les volumes "inutiles" si besoin
+	volume[Settings.ReverseStereo] = left;
+	volume[1 ^ Settings.ReverseStereo] = right;
+}
+
+void EchoData::setFilterCoefficient (int tap, int value)
+{
+    filterTaps[tap & 7] = value;
+    noFilter = (filterTaps[0] == 127 || filterTaps[0] == 0)
+	           && filterTaps [1] == 0
+		       && filterTaps [2] == 0
+		       && filterTaps [3] == 0
+		       && filterTaps [4] == 0
+		       && filterTaps [5] == 0
+	           && filterTaps [6] == 0
+		       && filterTaps [7] == 0;
 }

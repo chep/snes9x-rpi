@@ -62,13 +62,14 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 	audioBuffer(NULL),
 	threadProcess(NULL),
 	terminated(false),
+	mute(true),
 	channels(NUM_CHANNELS),
-	filterTaps(8),
+	soundSwitch(255),
+	playbackRate(0),
 	dummy(3)
 {
 	int err;
 	snd_pcm_hw_params_t *hw_params;
-	unsigned int frequency;
 	const int periods = 2;
 
 	for(unsigned int i = 0; i < NUM_CHANNELS; ++i)
@@ -76,7 +77,9 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 
 	if (mode >= sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))
 		mode = (sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))- 1;
-	frequency = audioFrequencies[mode];
+	playbackRate = audioFrequencies[mode];
+
+#warning rechercher tous les so.buffer_size parce qu ils sont x4
 	bufferSize = audioBufferSizes[mode];
 
 	err = snd_pcm_open(&playbackHandle,
@@ -115,7 +118,7 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 		                              + snd_strerror(err));
 
 	/* Rate */
-	err = snd_pcm_hw_params_set_rate_near(playbackHandle, hw_params, &frequency, 0);
+	err = snd_pcm_hw_params_set_rate_near(playbackHandle, hw_params, &playbackRate, 0);
 	if (err < 0)
 		throw AlsaFreeParamsException(hw_params,
 		                              std::string("Cannot set sample rate: ")
@@ -172,8 +175,19 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 
 	echoData = boost::shared_ptr<EchoData>(new EchoData(bufferSize));
 
+	reset(true);
+
+	errRate = SNES_SCANLINE_TIME * FIXED_POINT / (1.0 / double(playbackRate));
+	echoData->setDelay(APU.DSP [APU_EDL] & 0xf, playbackRate);
+
+#warning peut être inutile
+/*    for (int i = 0; i < channels.size(); i++)
+		channels[i].setSoundFrequency(i, SoundData.channels [i].hertz);
+*/
+
 	threadProcess = new boost::thread(boost::bind(&SoundSystem::processSound, this));
 
+	std::cout<< "Rate: " << playbackRate << ", Buffer size: " << bufferSize << std::endl;;
 	return;
 }
 
@@ -217,6 +231,8 @@ void SoundSystem::mixSamples()
 	}
 
 	std::fill(mixBuffer, mixBuffer + bufferSize, 0);
+	echoData->resetBuffer();
+
 	mixStereo();
 
 	if(echoData->isEchoEnabled())
@@ -224,7 +240,7 @@ void SoundSystem::mixSamples()
 		                     masterVolume);
 	else
 	{
-		int J;
+		unsigned J;
 		// 16-bit mono or stereo sound, no echo
 		for (J = 0; J < bufferSize; J++)
 		{
@@ -265,14 +281,6 @@ void SoundSystem::reset(bool full)
 	std::for_each(channels.begin(), channels.end(),
 	              std::mem_fun_ref(&Channel::reset));
 
-    filterTaps[0] = 127;
-    filterTaps[1] = 0;
-    filterTaps[2] = 0;
-    filterTaps[3] = 0;
-    filterTaps[4] = 0;
-    filterTaps[5] = 0;
-    filterTaps[6] = 0;
-    filterTaps[7] = 0;
     mute = true;
     noiseGen = 1;
     soundSwitch = 255;
@@ -304,7 +312,7 @@ void SoundSystem::setEchoEnable(boost::uint8_t byte)
 {
 	echoData->setEnable(byte);
 
-	for (int i = 0; i < channels.size(); ++i)
+	for (unsigned i = 0; i < channels.size(); ++i)
     {
 		if (byte & (1 << i))
 			channels[i].setEchoBufPtr(echoData->getBuffer());
@@ -312,3 +320,27 @@ void SoundSystem::setEchoEnable(boost::uint8_t byte)
 			channels[i].setEchoBufPtr(echoData->getDummyBuffer());
     }
 }
+
+
+
+void SoundSystem::setEchoWriteEnable(bool byte)
+{
+	echoData->setWriteEnabled(byte);
+	echoData->setDelay(APU.DSP[APU_EDL] & 15, playbackRate);
+}
+
+void SoundSystem::setVolume(int left, int right)
+{
+	#warning ajouter les volumes "inutiles" si besoin
+	masterVolume[Settings.ReverseStereo] = left;
+	masterVolume[1 ^ Settings.ReverseStereo] = right;
+}
+
+
+void SoundSystem::setAllChannelsNoiseFreq(int hertz)
+{
+	std::for_each(channels.begin(), channels.end(),
+	              boost::bind(&Channel::setNoiseFreq, _1, hertz, playbackRate));
+}
+
+

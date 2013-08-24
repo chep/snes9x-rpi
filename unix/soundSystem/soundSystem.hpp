@@ -60,9 +60,36 @@ public:
 	void processSound(void);
 	void playSample(unsigned channel, struct SAPU *apu)
 		{channels[channel].playSample(apu, playbackRate);}
-	void setMute(bool m) {mute = m;}
 	void reset(bool full);
+
+	void setMute(bool m) {mute = m;}
+	void setVolume(int left, int right);
+	void setEchoVolume(int left, int right) {echoData->setVolume(left, right);}
+	void setChannelVolume(unsigned c, int left, int right)
+		{channels[c].setVolume(left, right);}
+
 	void setEchoEnable(boost::uint8_t byte);
+	void setEchoWriteEnable(bool byte);
+	void setEchoFeedback(int f) {echoData->setFeedBack(f);}
+	void setEchoDelay(int delay) {echoData->setDelay(delay, playbackRate);}
+	void setFilterCoefficient (int tap, int value) {echoData->setFilterCoefficient (tap, value);}
+
+	void setChannelType(unsigned c, SoundType t) {channels[c].setType(t);}
+	SoundType getChannelType(unsigned c) const {return channels[c].getType();}
+	SoundState getChannelState(unsigned c) const {return channels[c].getState();}
+	signed short getChannelSample(unsigned c) const {return channels[c].getSample();}
+	void setSoundKeyOff(unsigned c) {channels[c].setSoundKeyOff(playbackRate);}
+	void fixEnvelope(unsigned channel,
+	                 boost::uint8_t gain, boost::uint8_t adsr1, boost::uint8_t adsr2)
+		{channels[channel].fixEnvelope(gain, adsr1, adsr2, playbackRate);}
+	int getEnvelopeHeight(unsigned c) const {return channels[c].getEnvelopeHeight();}
+	void setSoundFrequency(unsigned c, int hertz)
+		{channels[c].setSoundFrequency(hertz, playbackRate);}
+	void setAllChannelsNoiseFreq(int hertz);
+	void setChannelFrequency(unsigned c, int hertz) {channels[c].setFrequency(hertz);}
+
+	void setFrequencyModulationEnable(boost::uint8_t byte)
+		{pitchMod = byte & ~1;}
 
 private:
 	void mixSamples(void);
@@ -81,6 +108,7 @@ private:
 
 	bool mute;
 
+#warning on dirait que les volumes left et right ne servent à rien
     short masterVolumeLeft;
     short masterVolumeRight;
     int masterVolume [2];
@@ -92,9 +120,8 @@ private:
 	int soundSwitch;
 	int noiseGen;
 	int noiseHertz;
-	int playbackRate;
+	unsigned playbackRate;
 
-	std::vector<int> filterTaps;
 	std::vector<boost::uint32_t> dummy;
 
 	boost::uint32_t errRate;

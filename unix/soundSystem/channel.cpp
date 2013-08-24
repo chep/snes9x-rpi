@@ -21,9 +21,10 @@
 #define MAX_ENVELOPE_HEIGHT 127
 
 /********************************** Globals ***********************************/
-extern struct SSettings Settings;
-EXTERN_C struct SIAPU IAPU;
+extern "C" struct SSettings Settings;
+extern "C" struct SIAPU IAPU;
 extern int NoiseFreq [32];
+extern "C" struct SSNESGameFixes SNESGameFixes;
 
 
 /****************************** Static functions ******************************/
@@ -297,7 +298,7 @@ void Channel::altDecodeBlock ()
 
 void Channel::mixStereo(boost::int16_t *mixBuffer, unsigned bufferSize,
                         bool mod,
-                        int pitchMod, int *noiseGen, int playbackRate)
+                        int pitchMod, int *noiseGen, unsigned playbackRate)
 {
 	static int wave[SOUND_BUFFER_SIZE] = {0};
 	boost::int32_t VL, VR;
@@ -464,6 +465,9 @@ void Channel::mixStereo(boost::int16_t *mixBuffer, unsigned bufferSize,
 				setEnvRate (0, -1, 0,
 				            playbackRate);
 				break;
+
+			default:
+				break;
 			}
 			leftVolLevel = (envx * volumeLeft) / 128;
 			rightVolLevel = (envx * volumeRight) / 128;
@@ -562,7 +566,7 @@ void Channel::mixStereo(boost::int16_t *mixBuffer, unsigned bufferSize,
 
 
 void Channel::setEnvRate (unsigned long rate, int direction, int target,
-                          int playbackRate)
+                          unsigned playbackRate)
 {
 	envxTarget = target;
 
@@ -603,7 +607,7 @@ void Channel::setEndOfSample ()
 
 
 
-void Channel::playSample(struct SAPU *apu, int playbackRate)
+void Channel::playSample(struct SAPU *apu, unsigned playbackRate)
 {
 	state = SOUND_SILENT;
 	mode = MODE_NONE;
@@ -697,7 +701,7 @@ void Channel::playSample(struct SAPU *apu, int playbackRate)
 
 
 void Channel::fixEnvelope (boost::uint8_t gain, boost::uint8_t adsr1, boost::uint8_t adsr2,
-                           int playbackRate)
+                           unsigned playbackRate)
 {
 	if (adsr1 & 0x80)
 	{
@@ -772,11 +776,11 @@ void Channel::fixEnvelope (boost::uint8_t gain, boost::uint8_t adsr1, boost::uin
 				uint32 rate = (gain & 0x20) ?
 					          DecreaseRateExp [gain & 0x1f] / 2 :
 					          IncreaseRate [gain & 0x1f];
-				int newMode = (gain & 0x20) ?
-					          MODE_DECREASE_EXPONENTIAL
-					          : MODE_DECREASE_LINEAR;
+				SoundMode newMode = (gain & 0x20) ?
+					                MODE_DECREASE_EXPONENTIAL
+					                : MODE_DECREASE_LINEAR;
 
-				if (setSoundMode (mode))
+				if (setSoundMode(newMode))
 					setEnvRate (rate, -1, 0, playbackRate);
 			}
 		}
@@ -825,13 +829,16 @@ bool Channel::setSoundMode (SoundMode newMode)
 			mode = newMode;
 			return true;
 		}
+
+	default:
+		break;
 	}
 	return (false);
 }
 
 void Channel::setSoundADSR (int attack_rate, int decay_rate,
                             int sustain_rate, int sustain_level, int release_rate,
-                            int playbackRate)
+                            unsigned playbackRate)
 {
 	attackRate = attack_rate;
 	decayRate = decay_rate;
@@ -853,6 +860,8 @@ void Channel::setSoundADSR (int attack_rate, int decay_rate,
 	case SOUND_SUSTAIN:
 		setEnvRate (sustain_rate, -1, 0, playbackRate);
 		break;
+	default:
+		break;
 	}
 }
 
@@ -870,7 +879,7 @@ void Channel::setEnvelopeHeight (int level)
 }
 
 
-void Channel::setSoundFrequency (int hertz, int playbackRate)
+void Channel::setSoundFrequency (int hertz, unsigned playbackRate)
 {
     if (playbackRate)
     {
@@ -906,4 +915,35 @@ void Channel::reset()
 	sustainRate = 0;
 	releaseRate = 0;
 	sustainLevel = 0;
+}
+
+void Channel::setSoundKeyOff(unsigned playbackRate)
+{
+    if (state != SOUND_SILENT)
+    {
+		state = SOUND_RELEASE;
+		mode = MODE_RELEASE;
+		setEnvRate(8, -1, 0, playbackRate);
+    }
+}
+
+
+int Channel::getEnvelopeHeight () const
+{
+    if ((Settings.SoundEnvelopeHeightReading ||
+		SNESGameFixes.SoundEnvelopeHeightReading2) &&
+        state != SOUND_SILENT &&
+        state != SOUND_GAIN)
+    {
+        return envx;
+    }
+
+    //siren fix from XPP
+    if (SNESGameFixes.SoundEnvelopeHeightReading2 &&
+        state != SOUND_SILENT)
+    {
+        return envx;
+    }
+
+    return (0);
 }

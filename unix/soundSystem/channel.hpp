@@ -48,71 +48,90 @@ class Channel
 
 public:
 	SoundState getState() const {return state;}
+	SoundType getType() const {return type;}
 	void decode(bool mod);
 	void mixStereo(boost::int16_t *mixBuffer, unsigned bufferSize,
 	               bool mod,
-	               int pitchMod, int *noiseGen, int playbackRate);
-	void setChannelNumber(unsigned number) {channelNumber = number;}
-	void playSample(struct SAPU *apu, int playbackRate);
+	               int pitchMod, int *noiseGen, unsigned playbackRate);
+	void playSample(struct SAPU *apu, unsigned playbackRate);
 
 	void reset();
+
+	void setChannelNumber(unsigned number) {channelNumber = number;}
 	void setEchoBufPtr(boost::int16_t *buf) {echoBufPtr = buf;}
+	void setType(SoundType t) {type = t;}
+	void setSoundKeyOff(unsigned playbackRate);
+	void setVolume(int left, int right)
+		{
+			volumeLeft = left;
+			volumeRight = right;
+			leftVolLevel = envx * left / 128;
+			rightVolLevel = envx * right / 128;
+		}
+	void fixEnvelope (boost::uint8_t gain, boost::uint8_t adsr1, boost::uint8_t adsr2,
+	                  unsigned playbackRate);
+
+	signed short getSample() const {return sample;}
+
+	int getEnvelopeHeight() const;
+
+	void setSoundFrequency (int hertz, unsigned playbackRate);
+	void setNoiseFreq(int hertz, unsigned playbackRate)
+		{if(type == SOUND_NOISE) setSoundFrequency(hertz, playbackRate);}
+	void setFrequency(int h) {hertz = h;}
 
 private:
 	void decodeBlock();
 	void altDecodeBlock();
 	void setEndOfSample ();
 	void setEnvRate (unsigned long rate, int direction, int target,
-	                 int playbackRate);
-	void fixEnvelope (boost::uint8_t gain, boost::uint8_t adsr1, boost::uint8_t adsr2,
-	                  int playbackRate);
+	                 unsigned playbackRate);
 	void setEnvelopeHeight (int level);
 	void setSoundADSR (int attack_rate, int decay_rate,
 	                   int sustain_rate, int sustain_level, int release_rate,
-	                   int playbackRate);
+	                   unsigned playbackRate);
 	bool setSoundMode (SoundMode newMode);
-	void setSoundFrequency (int hertz, int playbackRate);
 
 private:
 	unsigned channelNumber;
 
-    SoundState state;
-    SoundType type;
-    short volumeLeft;
-    short volumeRight;
-    boost::uint32_t hertz;
-    boost::uint32_t frequency;
-    boost::uint32_t count;
-    bool loop;
-    int envx;
-    short leftVolLevel;
-    short rightVolLevel;
-    short envxTarget;
-    unsigned long int envError;
-    unsigned long erate;
-    int direction;
-    unsigned long attackRate;
-    unsigned long decayRate;
-    unsigned long sustainRate;
-    unsigned long releaseRate;
-    unsigned long sustainLevel;
-    signed short sample;
-    signed short decoded [16];
-    signed short previous16 [2];
-    signed short *block;
-    boost::uint16_t sampleNumber;
-    bool lastBlock;
-    bool needsDecode;
-    boost::uint32_t blockPointer;
-    boost::uint32_t samplePointer;
-    boost::int16_t *echoBufPtr;
-    SoundMode mode;
-    boost::int32_t envxx;
-    signed short nextSample;
-    boost::int32_t interpolate;
-    boost::int32_t previous [2];
-    // Just incase they are needed in the future, for snapshot compatibility.
-    boost::uint32_t dummy [8];
+	SoundState state;
+	SoundType type;
+	short volumeLeft;
+	short volumeRight;
+	boost::uint32_t hertz;
+	boost::uint32_t frequency;
+	boost::uint32_t count;
+	bool loop;
+	int envx;
+	short leftVolLevel;
+	short rightVolLevel;
+	short envxTarget;
+	unsigned long int envError;
+	unsigned long erate;
+	int direction;
+	unsigned long attackRate;
+	unsigned long decayRate;
+	unsigned long sustainRate;
+	unsigned long releaseRate;
+	unsigned long sustainLevel;
+	signed short sample;
+	signed short decoded [16];
+	signed short previous16 [2];
+	signed short *block;
+	boost::uint16_t sampleNumber;
+	bool lastBlock;
+	bool needsDecode;
+	boost::uint32_t blockPointer;
+	boost::uint32_t samplePointer;
+	boost::int16_t *echoBufPtr;
+	SoundMode mode;
+	boost::int32_t envxx;
+	signed short nextSample;
+	boost::int32_t interpolate;
+	boost::int32_t previous [2];
+	// Just incase they are needed in the future, for snapshot compatibility.
+	boost::uint32_t dummy [8];
 };
 
 #endif
