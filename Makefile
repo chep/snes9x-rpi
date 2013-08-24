@@ -1,12 +1,12 @@
 
 CXX = g++
 
-INCLDIRS=-Iunix -Iunix/input -Iunzip -Iunix/soundSystem -I. -I/home/chep/poubelle/duma_2_5_15 
+INCLDIRS=-Iunix -Iunix/input -Iunzip -Iunix/soundSystem -I.
 LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
 
 USEFULL_FLAGS=-Wall -Wextra
 
-OPTIMISE= -D_ZAURUS -g -ffast-math -fstrict-aliasing -fomit-frame-pointer
+OPTIMISE= -D_ZAURUS -O3 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
 UNZIPDEFINES=-DUNZIP_SUPPORT
 SOUNDDEFINES=-DSPC700_C
