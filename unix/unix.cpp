@@ -59,6 +59,7 @@
 #include <sys/mman.h>
 #include <vector>
 #include <boost/shared_ptr.hpp>
+#include <boost/chrono.hpp>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -634,19 +635,6 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 	return(TRUE);
 }
 
-#ifndef _ZAURUS
-static unsigned long now ()
-{
-    static unsigned long seconds_base = 0;
-    struct timeval tp;
-    gettimeofday (&tp, NULL);
-    if (!seconds_base)
-	seconds_base = tp.tv_sec;
-
-    return ((tp.tv_sec - seconds_base) * 1000 + tp.tv_usec / 1000);
-}
-#endif
-
 void _makepath (char *path, const char *, const char *dir,
 		const char *fname, const char *ext)
 {
@@ -767,6 +755,12 @@ void InitTimer ()
 	perror ("setitimer");
 }
 
+typedef boost::posix_time::milliseconds ms_t;
+typedef boost::chrono::duration<double> duration_t;
+
+typedef boost::chrono::duration<long long, boost::micro> microseconds;
+typedef boost::chrono::system_clock::time_point boostTime_t;
+
 void S9xSyncSpeed ()
 {
 	try
@@ -780,68 +774,49 @@ void S9xSyncSpeed ()
 	}
 
 
-    if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
-    {
-	static struct timeval next1 = {0, 0};
-	struct timeval now;
-
-	while (gettimeofday (&now, NULL) < 0) ;
-	if (next1.tv_sec == 0)
+	if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
 	{
-	    next1 = now;
-	    next1.tv_usec++;
-	}
+		boostTime_t now(boost::chrono::system_clock::now());
+		static boostTime_t next1(now + microseconds(1));
 
-	if (timercmp(&next1, &now, >))
-	{
-	    if (IPPU.SkippedFrames == 0)
-	    {
-		do
+		if (next1 > now)
 		{
-		    CHECK_SOUND ();
-//		    S9xProcessEvents (FALSE);
-		    while (gettimeofday (&now, NULL) < 0) ;
-		} while (timercmp(&next1, &now, >));
-	    }
-	    IPPU.RenderThisFrame = TRUE;
-	    IPPU.SkippedFrames = 0;
+			if (IPPU.SkippedFrames == 0)
+				boost::this_thread::sleep_until(next1);
+			IPPU.RenderThisFrame = TRUE;
+			IPPU.SkippedFrames = 0;
+		}
+		else
+		{
+			if (IPPU.SkippedFrames < mfs)
+			{
+				IPPU.SkippedFrames++;
+				IPPU.RenderThisFrame = FALSE;
+			}
+			else
+			{
+				IPPU.RenderThisFrame = TRUE;
+				IPPU.SkippedFrames = 0;
+				next1 = now;
+			}
+		}
+		next1 += microseconds(Settings.FrameTime);
 	}
 	else
 	{
-	    if (IPPU.SkippedFrames < mfs)
-	    {
-		IPPU.SkippedFrames++;
-		IPPU.RenderThisFrame = FALSE;
-	    }
-	    else
-	    {
-		IPPU.RenderThisFrame = TRUE;
-		IPPU.SkippedFrames = 0;
-		next1 = now;
-	    }
+		if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames
+		                         : Settings.SkipFrames))
+		{
+			IPPU.FrameSkip = 0;
+			IPPU.SkippedFrames = 0;
+			IPPU.RenderThisFrame = TRUE;
+		}
+		else
+		{
+			IPPU.SkippedFrames++;
+			IPPU.RenderThisFrame = FALSE;
+		}
 	}
-	next1.tv_usec += Settings.FrameTime;
-	if (next1.tv_usec >= 1000000)
-	{
-	    next1.tv_sec += next1.tv_usec / 1000000;
-	    next1.tv_usec %= 1000000;
-	}
-    }
-    else
-    {
-	if (++IPPU.FrameSkip >= (Settings.TurboMode ? Settings.TurboSkipFrames
-						    : Settings.SkipFrames))
-	{
-	    IPPU.FrameSkip = 0;
-	    IPPU.SkippedFrames = 0;
-	    IPPU.RenderThisFrame = TRUE;
-	}
-	else
-	{
-	    IPPU.SkippedFrames++;
-	    IPPU.RenderThisFrame = FALSE;
-	}
-    }
 }
 
 
