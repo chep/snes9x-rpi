@@ -58,6 +58,8 @@
 #include "srtc.h"
 #include "sdd1.h"
 
+#include <string>
+
 extern uint8 *SRAM;
 
 #ifdef ZSNES_FX
@@ -390,13 +392,13 @@ static char ROMFilename [_MAX_PATH];
 
 static void Freeze (STREAM);
 static int Unfreeze (STREAM);
-void FreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
+void FreezeStruct (STREAM stream, const std::string &name, void *base, FreezeData *fields,
 		   int num_fields);
-void FreezeBlock (STREAM stream, char *name, uint8 *block, int size);
+void FreezeBlock (STREAM stream, const std::string &name, uint8 *block, int size);
 
-int UnfreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
+int UnfreezeStruct (STREAM stream, const std::string &name, void *base, FreezeData *fields,
 		    int num_fields);
-int UnfreezeBlock (STREAM stream, char *name, uint8 *block, int size);
+int UnfreezeBlock (STREAM stream, const std::string &name, uint8 *block, int size);
 
 bool8_32 Snapshot (const char *filename)
 {
@@ -651,7 +653,7 @@ int FreezeSize (int size, int type)
     }
 }
 
-void FreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
+void FreezeStruct (STREAM stream, const std::string &name, void *base, FreezeData *fields,
 		   int num_fields)
 {
     // Work out the size of the required block
@@ -738,16 +740,16 @@ void FreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
     free(block);
 }
 
-void FreezeBlock (STREAM stream, char *name, uint8 *block, int size)
+void FreezeBlock (STREAM stream, const std::string &name, uint8 *block, int size)
 {
     char buffer [512];
-    sprintf (buffer, "%s:%06d:", name, size);
+    sprintf (buffer, "%s:%06d:", name.c_str(), size);
     WRITE_STREAM (buffer, strlen (buffer), stream);
     WRITE_STREAM (block, size, stream);
     
 }
 
-int UnfreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
+int UnfreezeStruct (STREAM stream, const std::string &name, void *base, FreezeData *fields,
 		     int num_fields)
 {
     // Work out the size of the required block
@@ -841,14 +843,14 @@ int UnfreezeStruct (STREAM stream, char *name, void *base, FreezeData *fields,
     return (result);
 }
 
-int UnfreezeBlock (STREAM stream, char *name, uint8 *block, int size)
+int UnfreezeBlock (STREAM stream, const std::string &name, uint8 *block, int size)
 {
     char buffer [20];
     int len = 0;
     int rem = 0;
     
     if (READ_STREAM (buffer, 11, stream) != 11 )              return (WRONG_FORMAT);
-	if (strncmp (buffer, name, 3) != 0 )                      return (WRONG_FORMAT);
+    if (strncmp (buffer, name.c_str(), 3) != 0 )                      return (WRONG_FORMAT);
     if ( buffer [3] != ':' || (len = atoi(&buffer [4])) == 0) return (WRONG_FORMAT);
 
     if (len > size)
