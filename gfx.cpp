@@ -1093,7 +1093,10 @@ void DrawOBJS (bool8_32 OnMain = FALSE, uint8 D = 0)
 			O += Left * gfx->PixSize;
 			if ((Offset = (Left - ppu->OBJ[S].HPos) & 7))
 			{
-			    O -= Offset * gfx->PixSize;
+				if (Offset * gfx->PixSize <= O)
+					O -= Offset * gfx->PixSize;
+				else
+					O = 0;
 			    int W = 8 - Offset;
 			    int Width = Right - Left;
 			    if (W > Width)
@@ -1584,8 +1587,10 @@ void DrawBackgroundOffset (uint32 BGMode, uint32 bg, uint8 Z1, uint8 Z2)
 		Count = 8 - Offset;
 		if (Count > MaxCount)
 		    Count = MaxCount;
-
-		s -= Offset * gfx->PixSize;
+		if (Offset * gfx->PixSize <= s)
+			s -= Offset * gfx->PixSize;
+		else
+			s = 0;
 		Tile = READ_2BYTES(t);
 		gfx->Z1 = gfx->Z2 = depths [(Tile & 0x2000) >> 13];
 
@@ -2130,7 +2135,10 @@ void DrawBackground (uint32 BGMode, uint32 bg, uint8 Z1, uint8 Z2)
 		Count = 8 - Offset;
 		if (Count > Width)
 		    Count = Width;
-		s -= Offset * gfx->PixSize;
+		if (Offset * gfx->PixSize < s)
+			s -= Offset * gfx->PixSize;
+		else
+			s = 0;
 		Tile = READ_2BYTES(t);
 		gfx->Z1 = gfx->Z2 = depths [(Tile & 0x2000) >> 13];
 
