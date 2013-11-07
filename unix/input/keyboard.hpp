@@ -40,7 +40,7 @@
 #define _KEYBOARD_HPP_
 
 #include <map>
-#include <SDL/SDL.h> //For SDLKey type
+#include <SDL2/SDL.h> //For SDLKey type
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/nvp.hpp>
 
@@ -69,7 +69,7 @@ class GlobalKeyboardMapping
 {
 public:
 	GlobalKeyboardMapping() {}
-	SDLKey& operator[](SNES_COMMON_KEY k) {return mapping[k];}
+	SDL_Scancode& operator[](SNES_COMMON_KEY k) {return mapping[k];}
 
 private:
 	friend class boost::serialization::access;
@@ -79,9 +79,9 @@ private:
 			using boost::serialization::make_nvp;
 			ar & make_nvp("mapping", mapping);
 		}
-	
+
 private:
-	std::map<SNES_COMMON_KEY, SDLKey> mapping;
+	std::map<SNES_COMMON_KEY, SDL_Scancode> mapping;
 };
 
 
@@ -92,10 +92,10 @@ public:
 	KeyboardMapping() {}
 
 public:
-	SDLKey getSDLKey(SNES_KEY k) {return mapping[k];}
-	void setSDLKey(SNES_KEY k, SDLKey sk) {mapping[k] = sk;}
+	SDL_Scancode getSDLKey(SNES_KEY k) {return mapping[k];}
+	void setSDLKey(SNES_KEY k, SDL_Scancode sk) {mapping[k] = sk;}
 
-	
+
 private:
 	friend class boost::serialization::access;
 	template<class archive>
@@ -106,7 +106,7 @@ private:
 		}
 
 private:
-	std::map<SNES_KEY, SDLKey> mapping;
+	std::map<SNES_KEY, SDL_Scancode> mapping;
 };
 
 #endif

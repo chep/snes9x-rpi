@@ -47,7 +47,7 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/utility.hpp>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 enum JOYSTICK_BUTTON {JB_A,
                       JB_B,
@@ -111,7 +111,7 @@ public:
 
 	std::string getName() const {return mapping->getName();}
 
-	int getSDLIndex() const {if(sdlJoy) return SDL_JoystickIndex(sdlJoy); else return -1;}
+	int getSDLIndex() const {if(sdlJoy) return SDL_JoystickInstanceID(sdlJoy); else return -1;}
 
 private:
 	SDL_Joystick *sdlJoy;

@@ -53,7 +53,7 @@ extern struct SPPU PPU;
 
 InputController::InputController() throw (SnesException):
 	config(std::string(S9xGetSnapshotDirectory()) + "/" + INPUT_CONFIG_DEFAULT_FILE),
-	keyboardState(SDL_GetKeyState(NULL))
+	keyboardState(SDL_GetKeyboardState(NULL))
 {
 	//Players initialisation
 	//First we try joysticks. If no joystick are available, we try keyboard.
@@ -75,7 +75,7 @@ InputController::InputController() throw (SnesException):
 			else
 				players.push_back(Player(NULL,
 				                         joy,
-				                         config.getJoystick(SDL_JoystickName(i))));
+				                         config.getJoystick(SDL_JoystickName(joy))));
 		}
 	}
 	//"Joystick" players ok let's add "keyboard" players.
@@ -204,20 +204,20 @@ void InputController::process(void)
 			}
 			break;
 		case SDL_KEYDOWN:
-			keyboardState = SDL_GetKeyState(NULL);
+			keyboardState = SDL_GetKeyboardState(NULL);
 
-			if (event.key.keysym.sym == SDLK_0)
+			if (event.key.keysym.scancode == SDL_SCANCODE_0)
 				Settings.DisplayFrameRate = !Settings.DisplayFrameRate;
-			else if (event.key.keysym.sym == SDLK_1)	PPU.BG_Forced ^= 1;
-			else if (event.key.keysym.sym == SDLK_2)	PPU.BG_Forced ^= 2;
-			else if (event.key.keysym.sym == SDLK_3)	PPU.BG_Forced ^= 4;
-			else if (event.key.keysym.sym == SDLK_4)	PPU.BG_Forced ^= 8;
-			else if (event.key.keysym.sym == SDLK_5)	PPU.BG_Forced ^= 16;
-			else if (event.key.keysym.sym == SDLK_6)	num = 1;
-			else if (event.key.keysym.sym == SDLK_7)	num = 2;
-			else if (event.key.keysym.sym == SDLK_8)	num = 3;
-			else if (event.key.keysym.sym == SDLK_9)	num = 4;
-			else if (event.key.keysym.sym == SDLK_r)
+			else if (event.key.keysym.scancode == SDL_SCANCODE_1)	PPU.BG_Forced ^= 1;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_2)	PPU.BG_Forced ^= 2;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_3)	PPU.BG_Forced ^= 4;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_4)	PPU.BG_Forced ^= 8;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_5)	PPU.BG_Forced ^= 16;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_6)	num = 1;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_7)	num = 2;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_8)	num = 3;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_9)	num = 4;
+			else if (event.key.keysym.scancode == SDL_SCANCODE_R)
 			{
 				if (event.key.keysym.mod & KMOD_SHIFT)
 					S9xReset();
@@ -234,7 +234,7 @@ void InputController::process(void)
 			}
 			break;
 		case SDL_KEYUP:
-			keyboardState = SDL_GetKeyState(NULL);
+			keyboardState = SDL_GetKeyboardState(NULL);
 		}
 	}
 }

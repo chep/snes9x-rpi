@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <boost/shared_ptr.hpp>
 #include <sys/stat.h>
@@ -38,7 +38,9 @@
 struct SDLInfos
 {
 	TTF_Font *font;
-	SDL_Surface *screen;
+	SDL_Texture *screen;
+	SDL_Window *sdlWindow;
+	SDL_Renderer *sdlRenderer;
 };
 
 
@@ -126,7 +128,7 @@ int main(int argc, char **argv)
 		std::cerr<<e.getName()<<std::endl;
 	}
 
-	SDL_FreeSurface(sdlInfos.screen);
+	SDL_DestroyTexture(sdlInfos.screen);
 	TTF_CloseFont(sdlInfos.font);
 	TTF_Quit();
 	return 0;
@@ -142,7 +144,12 @@ bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos)
 		return false;
 	}
 	atexit(SDL_Quit);
-	infos->screen = SDL_SetVideoMode(xs, ys, 16, SDL_SWSURFACE);
+	SDL_CreateWindowAndRenderer(xs, ys, 0,
+	                            &(infos->sdlWindow), &(infos->sdlRenderer));
+	infos->screen = SDL_CreateTexture(infos->sdlRenderer,
+	                                  SDL_PIXELFORMAT_UNKNOWN,
+	                                  SDL_TEXTUREACCESS_STREAMING,
+	                                  xs, ys);
 	if (infos->screen == NULL)
 	{
 		std::cerr<<"Couldn't set video mode: "<<SDL_GetError()<<std::endl;
@@ -152,11 +159,17 @@ bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos)
 	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
 
 	if( TTF_Init() == -1 )
+	{
+		std::cerr<<"Could not initialize SDL_ttf: "<<SDL_GetError()<<std::endl;
 		return false;
+	}
 
 	infos->font = TTF_OpenFont(FONT_FILE, 12);
-	if( infos->font == NULL ) 
+	if( infos->font == NULL )
+	{
+		std::cerr<<"Could not open font: "<<SDL_GetError()<<std::endl;
 		return false;
+	}
 
 	return true;
 }
@@ -164,25 +177,31 @@ bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos)
 bool displayMessage(SDLInfos &infos, int x, int y, std::string msg)
 {
 	SDL_Surface *message;
+	SDL_Texture *text;
 	SDL_Color textColor = {255, 255, 255};
 	SDL_Rect dst;
 	message = TTF_RenderText_Solid(infos.font, msg.c_str(), textColor); 
 	if(message == NULL)
+	{
+		std::cerr<<"Unable to create text surface"<<std::endl;
 		return false;
+	}
 	dst.x = x;
 	dst.y = y;
-	SDL_BlitSurface(message, NULL, infos.screen, &dst);
-
-	if(SDL_Flip(infos.screen) == -1)
-		return false;
+	dst.w = message->w;
+	dst.h = message->h;
+	text = SDL_CreateTextureFromSurface(infos.sdlRenderer, message);
+	SDL_RenderCopy(infos.sdlRenderer, text, NULL, &dst);
+	SDL_RenderPresent(infos.sdlRenderer);
 	SDL_FreeSurface(message);
+	SDL_DestroyTexture(text);
 
 	return true;
 }
 
-static void clearScreen(SDL_Surface *screen)
+static void clearScreen(SDLInfos &infos)
 {
-		SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
+	SDL_RenderClear(infos.sdlRenderer);
 }
 
 
@@ -191,7 +210,7 @@ static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> con
 	bool ok(false);
 	SDL_Event event;
 
-	clearScreen(infos.screen);
+	clearScreen(infos);
 	displayMessage(infos, 0, 0, "Global keys configuration");
 
 	displayMessage(infos, 0, 15,
@@ -203,7 +222,7 @@ static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> con
 		switch(event.type)
 		{
 		case SDL_KEYDOWN:
-			conf->setGlobalKey(KEY_ACCEL, event.key.keysym.sym);
+			conf->setGlobalKey(KEY_ACCEL, event.key.keysym.scancode);
 			ok = true;
 			break;
 		default:
@@ -220,7 +239,7 @@ static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> con
 		switch(event.type)
 		{
 		case SDL_KEYDOWN:
-			conf->setGlobalKey(KEY_QUIT, event.key.keysym.sym);
+			conf->setGlobalKey(KEY_QUIT, event.key.keysym.scancode);
 			ok = true;
 			break;
 		default:
@@ -244,13 +263,13 @@ static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> c
 				SDL_JoystickClose(joy);
 			else
 			{
-				AvailableJoystick *avJ(conf->getJoystick(SDL_JoystickName(i)));
+				AvailableJoystick *avJ(conf->getJoystick(SDL_JoystickName(joy)));
 				if (avJ->getName() == JOYSTICK_DEFAULT_NAME) //Not found in config
-					avJ = conf->addJoystick(SDL_JoystickName(i));
+					avJ = conf->addJoystick(SDL_JoystickName(joy));
 
-				clearScreen(infos.screen);
+				clearScreen(infos);
 				displayMessage(infos, 0, 0,
-				               std::string("Configuration of: ") + SDL_JoystickName(i));
+				               std::string("Configuration of: ") + SDL_JoystickName(joy));
 
 				for (int b = JB_A; b < JB_NB_BUTTONS; b++)
 				{
@@ -301,7 +320,7 @@ static void configureKeyboard(SDLInfos &infos,
 		std::ostringstream oss;
 		oss<<i + 1;
 		oss<<": ";
-		clearScreen(infos.screen);
+		clearScreen(infos);
 		displayMessage(infos, 0, 0,
 		               "Keyboard configuration number " + oss.str());
 
@@ -318,7 +337,7 @@ static void configureKeyboard(SDLInfos &infos,
 				switch(event.type)
 				{
 				case SDL_KEYDOWN:
-					kmap->setSDLKey((SNES_KEY)k, event.key.keysym.sym);
+					kmap->setSDLKey((SNES_KEY)k, event.key.keysym.scancode);
 					ok = true;
 					break;
 				default:
@@ -338,7 +357,7 @@ static std::string getHomeDirectory ()
 static std::string getSnapshotDirectory ()
 {
     const char *snapshot;
-    
+
     if (!(snapshot = getenv ("SNES9X_SNAPSHOT_DIR"))
         && !(snapshot = getenv ("SNES96_SNAPSHOT_DIR")))
     {

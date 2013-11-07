@@ -61,8 +61,8 @@ public:
 
 	bool verify(void) {return !(kbdMaps.empty() || joysticks.empty());} //Config is invalid if no keyboard default map
 
-	SDLKey getGlobalKey(SNES_COMMON_KEY k) {return globalMap[k];}
-	void setGlobalKey(SNES_COMMON_KEY k, SDLKey sk) {globalMap[k] = sk;}
+	SDL_Scancode getGlobalKey(SNES_COMMON_KEY k) {return globalMap[k];}
+	void setGlobalKey(SNES_COMMON_KEY k, SDL_Scancode sk) {globalMap[k] = sk;}
 
 	AvailableJoystick* getJoystick(std::string name);
 	AvailableJoystick* addJoystick(std::string name);

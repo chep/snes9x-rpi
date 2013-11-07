@@ -69,22 +69,22 @@ InputConfig::InputConfig(bool unused)
 {
 	(void) unused;
 
-	globalMap[KEY_ACCEL] = SDLK_BACKSPACE;
-	globalMap[KEY_QUIT] = SDLK_ESCAPE;
+	globalMap[KEY_ACCEL] = SDL_SCANCODE_BACKSPACE;
+	globalMap[KEY_QUIT] = SDL_SCANCODE_ESCAPE;
 
 	KeyboardMapping m;
-	m.setSDLKey(KEY_A, SDLK_d);
-	m.setSDLKey(KEY_B, SDLK_s);
-	m.setSDLKey(KEY_X, SDLK_e);
-	m.setSDLKey(KEY_Y, SDLK_w);
-	m.setSDLKey(KEY_L, SDLK_a);
-	m.setSDLKey(KEY_R, SDLK_f);
-	m.setSDLKey(KEY_START, SDLK_SPACE);
-	m.setSDLKey(KEY_SELECT, SDLK_LCTRL);
-	m.setSDLKey(KEY_RIGHT, SDLK_RIGHT);
-	m.setSDLKey(KEY_LEFT, SDLK_LEFT);
-	m.setSDLKey(KEY_UP, SDLK_UP);
-	m.setSDLKey(KEY_DOWN, SDLK_DOWN);
+	m.setSDLKey(KEY_A, SDL_SCANCODE_D);
+	m.setSDLKey(KEY_B, SDL_SCANCODE_S);
+	m.setSDLKey(KEY_X, SDL_SCANCODE_E);
+	m.setSDLKey(KEY_Y, SDL_SCANCODE_W);
+	m.setSDLKey(KEY_L, SDL_SCANCODE_A);
+	m.setSDLKey(KEY_R, SDL_SCANCODE_F);
+	m.setSDLKey(KEY_START, SDL_SCANCODE_SPACE);
+	m.setSDLKey(KEY_SELECT, SDL_SCANCODE_LCTRL);
+	m.setSDLKey(KEY_RIGHT, SDL_SCANCODE_RIGHT);
+	m.setSDLKey(KEY_LEFT, SDL_SCANCODE_LEFT);
+	m.setSDLKey(KEY_UP, SDL_SCANCODE_UP);
+	m.setSDLKey(KEY_DOWN, SDL_SCANCODE_DOWN);
 	kbdMaps.push_back(m);
 
 	AvailableJoystick j;

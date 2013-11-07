@@ -46,7 +46,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <dirent.h>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #undef USE_THREADS
 #define USE_THREADS
@@ -94,7 +94,9 @@ void InitTimer ();
 
 extern void S9xDisplayFrameRate (uint8 *, uint32);
 extern void S9xDisplayString (const char *string, uint8 *, uint32);
-extern SDL_Surface *screen;
+extern SDL_Texture *screen;
+extern SDL_Window *sdlWindow;
+extern SDL_Renderer *sdlRenderer;
 
 static uint32 ffc = 0;
 bool8_32 nso = FALSE, vga = FALSE;
@@ -576,14 +578,14 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 	if (vga) {
 		if (Width > 256) {
 			for (register uint32 i = 0; i < Height; i++) {
-				register uint32 *dp32 = (uint32 *)(screen->pixels) + ((i + cl) * xs) + lp;
+				register uint32 *dp32 = (uint32 *)(GFX.Screen) + ((i + cl) * xs) + lp;
 				register uint32 *sp32 = (uint32 *)(GFX.Screen) + (i << 8) + cs;
 				for (register uint32 j = 0; j < 256; j++)
 					*dp32++ = *sp32++;
 			}
 		} else {
 			for (register uint32 i = 0; i < Height; i++) {
-				register uint16 *dp16 = (uint16 *)(screen->pixels) + ((i + cl) * xs) * 2 + 64;
+				register uint16 *dp16 = (uint16 *)(GFX.Screen) + ((i + cl) * xs) * 2 + 64;
 				register uint16 *sp16 = (uint16 *)(GFX.Screen) + (i << 9) + cs;
 				for (register uint32 j = 0; j < 256; j++, dp16+=2, sp16++) {
 					*dp16 = *(dp16+1) = *sp16;
@@ -591,20 +593,22 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 			}
 		}
 		if (Settings.DisplayFrameRate)
-		    S9xDisplayFrameRate ((uint8 *)screen->pixels + 128, 2560);
+		    S9xDisplayFrameRate ((uint8 *)GFX.Screen + 128, 2560);
 		if (GFX.InfoString)
-		    S9xDisplayString (GFX.InfoString, (uint8 *)screen->pixels + 128, 2560);
+		    S9xDisplayString (GFX.InfoString, (uint8 *)GFX.Screen + 128, 2560);
 //  		SDL_UnlockSurface(screen);
 		if (ffc < 5) {
-			SDL_UpdateRect(screen,0,0,0,0);
+			SDL_UpdateTexture(screen, NULL, GFX.Screen, xs * 2);
+//			SDL_UpdateRect(screen,0,0,0,0);
 			++ffc;
 		} else
-			SDL_UpdateRect(screen,64,0,512,480);
+			SDL_UpdateTexture(screen, NULL, GFX.Screen, xs * 2);
+//SDL_UpdateRect(screen,64,0,512,480);
 	} else {
 		if (Settings.SupportHiRes) {
 			if (Width > 256) {
 				for (register uint32 i = 0; i < Height; i++) {
-					register uint16 *dp16 = (uint16 *)(screen->pixels) + ((i + cl) * xs) + lp;
+					register uint16 *dp16 = (uint16 *)(GFX.Screen) + ((i + cl) * xs) + lp;
 					register uint32 *sp32 = (uint32 *)(GFX.Screen) + (i << 8) + cs;
 					for (register uint32 j = 0; j < 256; j++) {
 						*dp16++ = *sp32++;
@@ -612,7 +616,7 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 				}
 			} else {
 				for (register uint32 i = 0; i < Height; i++) {
-					register uint32 *dp32 = (uint32 *)(screen->pixels) + ((i + cl) * xs / 2) + lp;
+					register uint32 *dp32 = (uint32 *)(GFX.Screen) + ((i + cl) * xs / 2) + lp;
 					register uint32 *sp32 = (uint32 *)(GFX.Screen) + (i << 8) + cs;
 					for (register uint32 j = 0; j < 128; j++) {
 						*dp32++ = *sp32++;
@@ -621,17 +625,22 @@ bool8_32 S9xDeinitUpdate (int Width, int Height)
 			}
 		}
 		if (Settings.DisplayFrameRate)
-		    S9xDisplayFrameRate ((uint8 *)screen->pixels + 64, 640);
+		    S9xDisplayFrameRate ((uint8 *)GFX.Screen + 64, 640);
 		if (GFX.InfoString)
-		    S9xDisplayString (GFX.InfoString, (uint8 *)screen->pixels + 64, 640);
+		    S9xDisplayString (GFX.InfoString, (uint8 *)GFX.Screen + 64, 640);
 //  		SDL_UnlockSurface(screen);
 		if (ffc < 5) {
-			SDL_UpdateRect(screen,0,0,0,0);
+			SDL_UpdateTexture(screen, NULL, GFX.Screen, xs * 2);
+//			SDL_UpdateRect(screen,0,0,0,0);
 			++ffc;
 		} else
-			SDL_UpdateRect(screen,32,0,256,Height);
+			SDL_UpdateTexture(screen, NULL, GFX.Screen, xs * 2);
+//			SDL_UpdateRect(screen,32,0,256,Height);
 		//	SDL_Flip(screen);
 	}
+	SDL_RenderClear(sdlRenderer);
+	SDL_RenderCopy(sdlRenderer, screen, NULL, NULL);
+	SDL_RenderPresent(sdlRenderer);
 	return(TRUE);
 }
 

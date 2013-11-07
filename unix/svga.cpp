@@ -48,7 +48,7 @@
 
 #include <signal.h>
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -62,7 +62,9 @@
 
 #define COUNT(a) (sizeof(a) / sizeof(a[0]))
 
-SDL_Surface *screen, *gfxscreen;
+SDL_Texture *screen, *gfxscreen;
+SDL_Window *sdlWindow;
+SDL_Renderer *sdlRenderer;
 
 uint16 *RGBconvert;
 extern uint32 xs, ys, cl, cs;
@@ -91,7 +93,12 @@ void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 	}
 
 	atexit(SDL_Quit);
-	screen = SDL_SetVideoMode(xs, ys, 16, SDL_SWSURFACE);
+	SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP, &sdlWindow, &sdlRenderer);
+
+	screen = SDL_CreateTexture(sdlRenderer,
+	                           SDL_PIXELFORMAT_RGB565,
+	                           SDL_TEXTUREACCESS_STREAMING,
+	                           xs, ys);
 	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
 
 
@@ -101,11 +108,11 @@ void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 		S9xExit();
 	}
 	if (Settings.SupportHiRes) {
-		gfxscreen = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 480, 16, 0, 0, 0, 0);
-		GFX.Screen = (uint8 *)gfxscreen->pixels;
+		//gfxscreen = SDL_CreateRGBSurface(SDL_SWSURFACE, 512, 480, 16, 0, 0, 0, 0);
+		GFX.Screen = (uint8*)malloc(512*480*2);//(uint8 *)gfxscreen->pixels;
 		GFX.Pitch = 512 * 2;
 	} else {
-		GFX.Screen = (uint8 *)screen->pixels + 64;
+		GFX.Screen = (uint8*)malloc(xs*ys*2 + 64);//(uint8 *)screen->pixels + 64;
 		GFX.Pitch = 320 * 2;
 	}
 	GFX.SubScreen = (uint8 *)malloc(512 * 480 * 2);
@@ -125,7 +132,8 @@ void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 void S9xDeinitDisplay ()
 {
 //	SDL_FreeSurface(gfxscreen);
-	SDL_FreeSurface(screen);
+	SDL_DestroyTexture(screen);
+	free(GFX.Screen);
 
 	free(GFX.SubScreen);
 	free(GFX.ZBuffer);

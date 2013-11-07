@@ -42,7 +42,7 @@
 #include <boost/thread.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 #include "inputConfig.hpp"
 #include "exceptions.hpp"
@@ -62,7 +62,7 @@ public:
 
 private:
 	InputConfig config;
-	Uint8 *keyboardState;
+	const Uint8 *keyboardState;
 
 	std::vector<Player> players;
 };
