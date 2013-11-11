@@ -86,21 +86,32 @@ void S9xTextMode ()
 
 void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (Settings.NextAPUEnabled ? SDL_INIT_AUDIO : 0)) < 0 ) 
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | (Settings.NextAPUEnabled ? SDL_INIT_AUDIO : 0)) < 0 )
 	{
 		printf("Could not initialize SDL(%s)\n", SDL_GetError());
 		S9xExit();
 	}
 
 	atexit(SDL_Quit);
-	SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP, &sdlWindow, &sdlRenderer);
+	if (SDL_CreateWindowAndRenderer(0, 0,
+	                                SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_OPENGL,
+	                                &sdlWindow, &sdlRenderer) < 0)
+	{
+		std::cerr<<"Couln't create window and renderer: "<<SDL_GetError()<<std::endl;
+		S9xExit();
+	}
 
 	screen = SDL_CreateTexture(sdlRenderer,
 	                           SDL_PIXELFORMAT_RGB565,
 	                           SDL_TEXTUREACCESS_STREAMING,
 	                           xs, ys);
-	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
+	if (!screen)
+	{
+		std::cerr<<"Couldn't create texture: "<<SDL_GetError()<<std::endl;
+		S9xExit();
+	}
 
+	SDL_ShowCursor(0); // rPi: we're not really interested in showing a mouse cursor
 
 	if (screen == NULL)
 	{

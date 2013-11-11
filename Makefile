@@ -2,7 +2,7 @@
 CXX = g++
 
 INCLDIRS=-Iunix -Iunix/input -Iunzip -I.
-LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
+LIBDIRS=-L/usr/lib/arm-linux-gnueabihf -L/usr/local/lib -L/opt/vc/lib/
 
 OPTIMISE= -D_ZAURUS -O3 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
@@ -21,8 +21,8 @@ $(UNZIPDEFINES) \
 
 CFLAGS=$(CXXFLAGS)
 
-LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lboost_thread -lasound -lboost_system -lboost_chrono
-LDFLAGS_conftool = -lSDL2 -lSDL2_ttf -lboost_serialization -L/usr/local/lib
+LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lboost_thread -lasound -lboost_system -lboost_chrono -lbcm_host
+LDFLAGS_conftool = -lSDL2 -lSDL2_ttf -lboost_serialization -lbcm_host
 
 SNES9X_SRC = $(wildcard *.cpp)
 SNES9X_SRC += $(wildcard unix/*.cpp)

@@ -144,15 +144,19 @@ bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos)
 		return false;
 	}
 	atexit(SDL_Quit);
-	SDL_CreateWindowAndRenderer(xs, ys, 0,
-	                            &(infos->sdlWindow), &(infos->sdlRenderer));
+	if (SDL_CreateWindowAndRenderer(xs, ys, SDL_WINDOW_OPENGL,
+	                                &(infos->sdlWindow), &(infos->sdlRenderer)) < 0)
+	{
+		std::cerr<<"Couln't create window and renderer: "<<SDL_GetError()<<std::endl;
+		return false;
+	}
 	infos->screen = SDL_CreateTexture(infos->sdlRenderer,
 	                                  SDL_PIXELFORMAT_UNKNOWN,
 	                                  SDL_TEXTUREACCESS_STREAMING,
 	                                  xs, ys);
 	if (infos->screen == NULL)
 	{
-		std::cerr<<"Couldn't set video mode: "<<SDL_GetError()<<std::endl;
+		std::cerr<<"Couldn't create texture: "<<SDL_GetError()<<std::endl;
 		return false;
 	}
 
@@ -254,7 +258,7 @@ static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> c
 	int numJoysticks(0);
 
 	numJoysticks = SDL_NumJoysticks();
-	for (int i = 0; i < numJoysticks; ++i) 
+	for (int i = 0; i < numJoysticks; ++i)
 	{
 		SDL_Joystick *joy = SDL_JoystickOpen(i);
 		if (joy)
