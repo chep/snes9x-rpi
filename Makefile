@@ -1,10 +1,9 @@
 
-CXX = g++
 
 INCLDIRS=-Iunix -Iunix/input -Iunzip -I.
 LIBDIRS=-L/usr/lib/arm-linux-gnueabihf
 
-OPTIMISE= -D_ZAURUS -O3 -march=armv6zk -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
+OPTIMISE= -D_ZAURUS -O3 -march=armv7-a -mtune=cortex-a7 -mfpu=vfpv4 -mfloat-abi=hard -ffast-math -fstrict-aliasing -fomit-frame-pointer
 
 UNZIPDEFINES=-DUNZIP_SUPPORT
 SOUNDDEFINES=-DSPC700_C
