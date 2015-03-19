@@ -45,7 +45,7 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/nvp.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/utility.hpp>
 #include <SDL2/SDL.h>
 
@@ -125,7 +125,7 @@ inline bool operator==(const AvailableJoystick &j, const std::string &name)
 {
 	return j.getName() == name;
 }
-inline bool operator==(boost::shared_ptr<AvailableJoystick> j, const std::string &name)
+inline bool operator==(std::shared_ptr<AvailableJoystick> j, const std::string &name)
 {
 	return j->getName() == name;
 }

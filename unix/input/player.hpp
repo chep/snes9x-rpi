@@ -39,7 +39,7 @@
 #ifndef _PLAYER_HPP_
 #define _PLAYER_HPP_
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <boost/cstdint.hpp>
 #include <SDL2/SDL.h>
 
@@ -75,7 +75,7 @@ public:
 
 private:
 	KeyboardMapping *kmap;
-	boost::shared_ptr<PluggedJoystick> joystick;
+	std::shared_ptr<PluggedJoystick> joystick;
 };
 
 #endif

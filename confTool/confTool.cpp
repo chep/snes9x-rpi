@@ -24,7 +24,7 @@
 #include <sstream>
 #include <SDL2/SDL.h>
 #include <SDL/SDL_ttf.h>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <sys/stat.h>
 
 #include "inputConfig.hpp"
@@ -71,10 +71,12 @@ const std::string conversionKbd[] = {"A",
 static bool initSDL(uint32_t xs, uint32_t ys, SDLInfos *infos);
 static bool displayMessage(SDLInfos &infos, int x, int y, std::string msg);
 static void clearScreen(SDL_Surface *screen);
-static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> conf);
-static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> conf);
+static void configureGlobals(SDLInfos &infos,
+                             std::shared_ptr<InputConfig> conf);
+static void configureJoysticks(SDLInfos &infos,
+                               std::shared_ptr<InputConfig> conf);
 static void configureKeyboard(SDLInfos &infos,
-                              boost::shared_ptr<InputConfig> conf,
+                              std::shared_ptr<InputConfig> conf,
                               unsigned nbKeyboards);
 static std::string getHomeDirectory ();
 static std::string getSnapshotDirectory ();
@@ -82,7 +84,7 @@ static std::string getSnapshotDirectory ();
 
 int main(int argc, char **argv)
 {
-	boost::shared_ptr<InputConfig> conf;
+	std::shared_ptr<InputConfig> conf;
 	SDLInfos sdlInfos;
 	unsigned nbKeyboards(0);
 
@@ -97,13 +99,13 @@ int main(int argc, char **argv)
 
 	try
 	{
-		conf = boost::shared_ptr<InputConfig>(new InputConfig(std::string(getSnapshotDirectory())
+		conf = std::shared_ptr<InputConfig>(new InputConfig(std::string(getSnapshotDirectory())
 		                                                      + "/" + INPUT_CONFIG_DEFAULT_FILE));
 	}
 	catch (...)
 	{
 		std::cerr<<"Exception occurs. Creating a new config."<<std::endl;
-		conf = boost::shared_ptr<InputConfig>(new InputConfig(true));
+		conf = std::shared_ptr<InputConfig>(new InputConfig(true));
 	}
 	//Keyboard is always reconfigured:
 	conf->clearKbdMap();
@@ -205,7 +207,7 @@ static void clearScreen(SDLInfos &infos)
 }
 
 
-static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> conf)
+static void configureGlobals(SDLInfos &infos, std::shared_ptr<InputConfig> conf)
 {
 	bool ok(false);
 	SDL_Event event;
@@ -249,12 +251,12 @@ static void configureGlobals(SDLInfos &infos, boost::shared_ptr<InputConfig> con
 }
 
 
-static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> conf)
+static void configureJoysticks(SDLInfos &infos, std::shared_ptr<InputConfig> conf)
 {
 	int numJoysticks(0);
 
 	numJoysticks = SDL_NumJoysticks();
-	for (int i = 0; i < numJoysticks; ++i) 
+	for (int i = 0; i < numJoysticks; ++i)
 	{
 		SDL_Joystick *joy = SDL_JoystickOpen(i);
 		if (joy)
@@ -311,7 +313,7 @@ static void configureJoysticks(SDLInfos &infos, boost::shared_ptr<InputConfig> c
 
 
 static void configureKeyboard(SDLInfos &infos,
-                              boost::shared_ptr<InputConfig> conf,
+                              std::shared_ptr<InputConfig> conf,
                               unsigned nbKeyboards)
 {
 	for (unsigned i = 0; i < nbKeyboards; i++)

@@ -58,7 +58,6 @@
 #include <sys/soundcard.h>
 #include <sys/mman.h>
 #include <vector>
-#include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
 #include <boost/thread.hpp>
 
