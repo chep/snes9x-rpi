@@ -60,6 +60,7 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 #include <boost/chrono.hpp>
+#include <boost/thread.hpp>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -768,9 +769,6 @@ void InitTimer ()
     if (setitimer (ITIMER_REAL, &timeout, NULL) < 0)
 	perror ("setitimer");
 }
-
-typedef boost::posix_time::milliseconds ms_t;
-typedef boost::chrono::duration<double> duration_t;
 
 typedef boost::chrono::duration<long long, boost::micro> microseconds;
 typedef boost::chrono::system_clock::time_point boostTime_t;

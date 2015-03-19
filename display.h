@@ -42,7 +42,6 @@
 #define _DISPLAY_H_
 
 #include <vector>
-#include <boost/shared_ptr.hpp>
 
 #include "joystick.hpp"
 START_EXTERN_C

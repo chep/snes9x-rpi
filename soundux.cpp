@@ -1444,7 +1444,7 @@ void S9xMixSamples (uint8 *buffer, int sample_count)
 }
 #endif
 
-void S9xMixSamplesO (boost::int16_t *buffer, int sample_count, int byte_offset)
+void S9xMixSamplesO (int16_t *buffer, int sample_count, int byte_offset)
 {
     int J;
     int I;

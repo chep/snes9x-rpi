@@ -55,9 +55,9 @@ Player::Player(KeyboardMapping *kmap,
 }
 
 
-boost::uint32_t Player::getControllerState(const Uint8 *keyboardState) const throw (ExitException)
+uint32_t Player::getControllerState(const Uint8 *keyboardState) const throw (ExitException)
 {
-	boost::uint32_t state(0);
+	uint32_t state(0);
 
 	if (kmap)
 	{

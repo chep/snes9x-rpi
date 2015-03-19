@@ -75,7 +75,7 @@
 #ifndef _SOUND_H_
 #define _SOUND_H_
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 enum { SOUND_SAMPLE = 0, SOUND_NOISE, SOUND_EXTRA_NOISE, SOUND_MUTE };
 enum { SOUND_SILENT, SOUND_ATTACK, SOUND_DECAY, SOUND_SUSTAIN,
@@ -228,7 +228,7 @@ void S9xFixEnvelope (int channel, uint8 gain, uint8 adsr1, uint8 adsr2);
 void S9xStartSample (int channel);
 
 EXTERN_C void S9xMixSamples (uint8 *buffer, int sample_count);
-EXTERN_C void S9xMixSamplesO (boost::int16_t *buffer, int sample_count, int byte_offset);
+EXTERN_C void S9xMixSamplesO (int16_t *buffer, int sample_count, int byte_offset);
 bool8_32 S9xOpenSoundDevice (int, bool8_32, int);
 void S9xSetPlaybackRate (uint32 rate);
 #endif

@@ -102,9 +102,9 @@ InputController::~InputController()
 
 
 
-boost::uint32_t InputController::getControllerState(unsigned player) throw (ExitException)
+uint32_t InputController::getControllerState(unsigned player) throw (ExitException)
 {
-	boost::uint32_t state(0x80000000);
+	uint32_t state(0x80000000);
 
 	if (player >= players.size())
 		return state;
@@ -246,10 +246,11 @@ Player* InputController::getPlayerByJoystick(int joystickIndex)
 		return NULL;
 	else
 	{
+		using namespace std::placeholders;
 		std::vector<Player>::iterator it(std::find_if(players.begin(),
 		                                              players.end(),
-		                                              boost::bind(&Player::hasJoystick,
-		                                                          _1, joystickIndex)));
+		                                              std::bind(&Player::hasJoystick,
+		                                                        _1, joystickIndex)));
 		if (it == players.end())
 			return NULL;
 		else

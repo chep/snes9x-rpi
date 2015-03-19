@@ -39,9 +39,7 @@
 #ifndef _INPUTCONTROLLER_HPP_
 #define _INPUTCONTROLLER_HPP_
 
-#include <boost/thread.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/shared_ptr.hpp>
+#include <cstdint>
 #include <SDL2/SDL.h>
 
 #include "inputConfig.hpp"
@@ -55,7 +53,7 @@ public:
 	virtual ~InputController();
 
 public:
-	boost::uint32_t getControllerState(unsigned player) throw (ExitException);
+	uint32_t getControllerState(unsigned player) throw (ExitException);
 	void checkGlobal(void) throw (ExitException);
 	void process(void);
 	Player* getPlayerByJoystick(int joystickIndex);
