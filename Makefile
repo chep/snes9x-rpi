@@ -16,11 +16,12 @@ CXXFLAGS = $(OPTIMISE) \
 -DSPC700_SHUTDOWN \
 $(SOUNDDEFINES) \
 $(UNZIPDEFINES) \
--DNO_INLINE_SET_GET
+-DNO_INLINE_SET_GET \
+-std=c++11
 
 CFLAGS=$(CXXFLAGS)
 
-LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lboost_thread -lasound -lboost_system -lboost_chrono
+LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lboost_thread -lasound -lboost_system -lboost_chrono -lpulse -lpulse-simple
 LDFLAGS_conftool = -lSDL2 -lSDL2_ttf -lboost_serialization -L/usr/local/lib
 
 SNES9X_SRC = $(wildcard *.cpp)
@@ -38,7 +39,7 @@ CONFTOOL_OBJ = $(CONFTOOL_SRC:.cpp=.o)
 	@$(CXX) $(INCLDIRS) $(CXXFLAGS) -fPIC -c $< -o$@
 
 %.d: %.cpp
-	@$(CXX) -MM $(INCLDIRS) $^ > $@
+	@$(CXX) $(CXXFLAGS) -MM $(INCLDIRS) $^ > $@
 
 LDLIBS =  
 
