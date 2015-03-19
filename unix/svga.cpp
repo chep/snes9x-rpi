@@ -93,7 +93,10 @@ void S9xInitDisplay (int /*argc*/, char ** /*argv*/)
 	}
 
 	atexit(SDL_Quit);
-	SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP, &sdlWindow, &sdlRenderer);
+	SDL_CreateWindowAndRenderer(xs, ys,
+	                            0,
+	                            &sdlWindow,
+	                            &sdlRenderer);
 
 	screen = SDL_CreateTexture(sdlRenderer,
 	                           SDL_PIXELFORMAT_RGB565,

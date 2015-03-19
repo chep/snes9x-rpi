@@ -39,17 +39,13 @@
 #include <iostream>
 #include <fstream>
 
-#include "soundSystem.hpp"
+#include "alsaSoundSystem.hpp"
 #include "port.h"
 #include "soundux.h"
 
-static const unsigned int audioFrequencies[8] =
-{0, 8192, 11025, 16000, 22050, 29300, 36600, 44100};
-
-static const unsigned int audioBufferSizes [8] =
-{ 0, 256, 256, 256, 512, 512, 1024, 1024};
-
-SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesException):
+AlsaSoundSystem::AlsaSoundSystem(unsigned int mode,
+                                 std::string device)throw (SnesException):
+	SoundSystem(),
 	playback_handle(NULL),
 	audioBuffer(NULL),
 	threadProcess(NULL),
@@ -58,7 +54,7 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 	int err;
 	snd_pcm_hw_params_t *hw_params;
 	unsigned int frequency;
-	const int periods = 2;
+	unsigned periods = 2;
 
 	if (mode >= sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))
 		mode = (sizeof(audioFrequencies) / sizeof(audioFrequencies[0]))- 1;
@@ -116,8 +112,19 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 		                              std::string("Cannot set channel count: ")
 		                              + snd_strerror(err));
 
+	// unsigned val; int dir;
+	// snd_pcm_hw_params_get_periods_max(hw_params,
+	//                                   &val,
+	//                                   &dir);
+	// std::cerr<<"val: "<<val<<" dir: "<<dir<<std::endl;
+	int dir;
+	snd_pcm_hw_params_get_periods_min(hw_params,
+	                                   &periods,
+	                                   &dir);
+
 	/* Set number of periods. */
-	if (snd_pcm_hw_params_set_periods(playback_handle, hw_params, periods, 0) < 0)
+	err = snd_pcm_hw_params_set_periods(playback_handle, hw_params, periods, 0);
+	if (err < 0)
 	    throw AlsaFreeParamsException(hw_params,
 	                                  std::string("Cannot set periods: ")
 	                                  + snd_strerror(err));
@@ -146,20 +153,20 @@ SoundSystem::SoundSystem(unsigned int mode, std::string device) throw (SnesExcep
 	snd_pcm_hw_params_free (hw_params);
 
 
-	audioBuffer = new boost::int16_t[bufferSize];
+	audioBuffer = new int16_t[bufferSize];
 	if (!audioBuffer)
 	{
 		std::cerr<<"Unable to allocate audio buffer."<<std::endl;
 		throw -1;
 	}
-	std::memset(audioBuffer, 0, bufferSize);
+	memset(audioBuffer, 0, bufferSize);
 
-	threadProcess = new boost::thread(boost::bind(&SoundSystem::processSound, this));
+	threadProcess = new std::thread(&AlsaSoundSystem::processSound, this);
 
 	return;
 }
 
-SoundSystem::~SoundSystem()
+AlsaSoundSystem::~AlsaSoundSystem()
 {
 	terminated = true;
 	if (threadProcess)
@@ -176,7 +183,7 @@ SoundSystem::~SoundSystem()
 }
 
 
-void SoundSystem::processSound()
+void AlsaSoundSystem::processSound()
 {
 	while (!terminated)
 	{

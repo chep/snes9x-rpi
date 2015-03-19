@@ -41,6 +41,7 @@
 #ifndef _SNES9X_H_
 #define _SNES9X_H_
 
+#include <string>
 #define VERSION "1.39"
 
 #include "port.h"
@@ -295,7 +296,9 @@ struct SSettings{
     bool8_32  NextAPUEnabled;
     uint8  AltSampleDecode;
     bool8_32  FixFrequency;
-    
+	bool alsa;
+	std::string alsaDevice;
+
     // Graphics options
     bool8_32  SixteenBit;
     bool8_32  Transparency;

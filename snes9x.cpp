@@ -73,7 +73,13 @@ char *S9xParseArgs (char **argv, int argc)
 	    if (strcasecmp (argv [i], "-so") == 0 ||
 		     strcasecmp (argv [i], "-sound") == 0)
 	    {
-		Settings.NextAPUEnabled = TRUE;
+		    Settings.NextAPUEnabled = TRUE;
+	    }
+	    else if (strcasecmp (argv[i], "-alsa") == 0)
+	    {
+		    Settings.alsa = true;
+		    if (i + 1 < argc)
+			    Settings.alsaDevice = argv[++i];
 	    }
 	    else if (strcasecmp (argv [i], "-ns") == 0 ||
 		     strcasecmp (argv [i], "-nosound") == 0)

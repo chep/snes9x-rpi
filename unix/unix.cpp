@@ -73,15 +73,16 @@
 #include "soundux.h"
 #include "spc700.h"
 #include "joystick.hpp"
-#include "soundSystem.hpp"
+#include "alsaSoundSystem.hpp"
+#include "pulseSoundSystem.hpp"
 #include "inputController.hpp"
 
 SoundSystem *sndSys(NULL);
 InputController *inputController(NULL);
 
 // rPi port: added all this joystick stuff
-// If for some unfathomable reason your joystick has more than 32 buttons or 8 
-// axes, you should change these array definitions to reflect that. 
+// If for some unfathomable reason your joystick has more than 32 buttons or 8
+// axes, you should change these array definitions to reflect that.
 // int8 joy_buttons[NB_MAX_CONTROLLERS][32];
 // uint8 joy_axes[NB_MAX_CONTROLLERS][8];
 
@@ -201,8 +202,6 @@ int main (int argc, char **argv)
     if (argc < 2)
 	    S9xUsage ();
 
-    ZeroMemory (&Settings, sizeof (Settings));
-
     Settings.JoystickEnabled = TRUE; // rPi changed default
     Settings.SoundPlaybackRate = 7;
     Settings.Stereo = TRUE;
@@ -233,6 +232,8 @@ int main (int argc, char **argv)
     Settings.ApplyCheats = TRUE;
     Settings.TurboMode = FALSE;
     Settings.TurboSkipFrames = 15;
+    Settings.alsa = false;
+    Settings.alsaDevice = "hw:0,0";
     rom_filename = S9xParseArgs (argv, argc);
 
 //    Settings.Transparency = Settings.ForceTransparency;
@@ -734,10 +735,14 @@ void InitTimer ()
 {
     struct itimerval timeout;
     struct sigaction sa;
-    
+
     try
     {
-	    sndSys = new SoundSystem (Settings.SoundPlaybackRate, "hw:0,0");
+	    if (Settings.alsa)
+		    sndSys = new AlsaSoundSystem (Settings.SoundPlaybackRate,
+		                                  Settings.alsaDevice);
+	    else
+		    sndSys = new PulseSoundSystem(Settings.SoundPlaybackRate);
     }
     catch (SnesException e)
     {
