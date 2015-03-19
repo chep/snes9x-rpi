@@ -40,7 +40,7 @@
 #define _PLAYER_HPP_
 
 #include <memory>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <SDL2/SDL.h>
 
 #include "keyboard.hpp"

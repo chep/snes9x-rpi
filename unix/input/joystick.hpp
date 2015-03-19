@@ -46,7 +46,6 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <memory>
-#include <boost/utility.hpp>
 #include <SDL2/SDL.h>
 
 enum JOYSTICK_BUTTON {JB_A,
@@ -98,7 +97,7 @@ private:
 
 
 //Uncopiable because of SDL_Joystick:
-class PluggedJoystick: boost::noncopyable 
+class PluggedJoystick
 {
 public:
 	PluggedJoystick(SDL_Joystick *sdlJoy,
@@ -112,6 +111,9 @@ public:
 	std::string getName() const {return mapping->getName();}
 
 	int getSDLIndex() const {if(sdlJoy) return SDL_JoystickInstanceID(sdlJoy); else return -1;}
+
+private:
+	PluggedJoystick(const PluggedJoystick&);
 
 private:
 	SDL_Joystick *sdlJoy;
