@@ -1,7 +1,7 @@
 Source: snes9x-rpi
 Priority: extra
 Maintainer: Cédric Chépied <cedric.chepied@ggmail.com>
-Build-Depends: debhelper (>= 7), fonts-freefont-ttf, libboost-serialization-dev, libboost-thread-dev, libboost-system-dev, libsdl1.2-dev, libsdl-ttf2.0-dev, libasound2-dev
+Build-Depends: debhelper (>= 7), fonts-freefont-ttf, libboost-serialization-dev, libsdl2-dev , libsdl2-ttf-dev, libasound2-dev, libpulse-dev
 Standards-Version: 0.2
 Section: emulators
 Homepage: https://github.com/chep/snes9x-rpi
