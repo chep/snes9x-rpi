@@ -58,8 +58,8 @@
 #include <sys/soundcard.h>
 #include <sys/mman.h>
 #include <vector>
-#include <boost/chrono.hpp>
-#include <boost/thread.hpp>
+#include <thread>
+#include <chrono>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -769,9 +769,6 @@ void InitTimer ()
 	perror ("setitimer");
 }
 
-typedef boost::chrono::duration<long long, boost::micro> microseconds;
-typedef boost::chrono::system_clock::time_point boostTime_t;
-
 void S9xSyncSpeed ()
 {
 	try
@@ -787,13 +784,19 @@ void S9xSyncSpeed ()
 
 	if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
 	{
-		boostTime_t now(boost::chrono::system_clock::now());
-		static boostTime_t next1(now + microseconds(1));
+		using namespace std::chrono;
+		system_clock::time_point now(system_clock::now());
+		static system_clock::time_point next1(now + microseconds(1));
 
 		if (next1 > now)
 		{
 			if (IPPU.SkippedFrames == 0)
-				boost::this_thread::sleep_until(next1);
+				while(next1 > now)
+				{
+					std::this_thread::sleep_for(next1 - now);
+					now =system_clock::now();
+				}
+
 			IPPU.RenderThisFrame = TRUE;
 			IPPU.SkippedFrames = 0;
 		}

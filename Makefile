@@ -21,7 +21,7 @@ $(UNZIPDEFINES) \
 
 CFLAGS=$(CXXFLAGS)
 
-LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lboost_thread -lasound -lboost_system -lboost_chrono -lpulse -lpulse-simple
+LDFLAGS=-lboost_serialization -lSDL2 -lstdc++ -lz -lasound -lpulse -lpulse-simple
 LDFLAGS_conftool = -lSDL2 -lSDL2_ttf -lboost_serialization -L/usr/local/lib
 
 SNES9X_SRC = $(wildcard *.cpp)
