@@ -23,7 +23,7 @@
 #include <fstream>
 #include <sstream>
 #include <SDL2/SDL.h>
-#include <SDL/SDL_ttf.h>
+#include <SDL2/SDL_ttf.h>
 #include <memory>
 #include <sys/stat.h>
 
