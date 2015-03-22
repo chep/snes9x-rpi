@@ -1,0 +1,4 @@
+*.o
+*.d
+snes9x
+confTool/confTool
